@@ -1,0 +1,246 @@
+name: Apply TASK-001 (contacts + camelCase + RLS)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to commit to'
+        required: true
+        default: 'main'
+      commit_message:
+        description: 'Commit message'
+        required: true
+        default: 'TASK-001: add /contacts; fix camelCase columns; update RLS policies'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Create files for TASK-001
+        run: |
+          mkdir -p supabase/migrations pages
+
+          cat > supabase/migrations/004_fix_camelcase.sql << 'SQL'
+          -- Rename columns to quoted camelCase if they exist in lowercase.
+          do $$
+          begin
+            -- artists
+            if exists (select 1 from information_schema.columns where table_name='artists' and column_name='fullname') then
+              execute 'alter table artists rename column fullName to "fullName"';
+            end if;
+            if exists (select 1 from information_schema.columns where table_name='artists' and column_name='birthyear') then
+              execute 'alter table artists rename column birthYear to "birthYear"';
+            end if;
+            if exists (select 1 from information_schema.columns where table_name='artists' and column_name='portraiturl') then
+              execute 'alter table artists rename column portraitUrl to "portraitUrl"';
+            end if;
+            if exists (select 1 from information_schema.columns where table_name='artists' and column_name='ispublished') then
+              execute 'alter table artists rename column isPublished to "isPublished"';
+            end if;
+
+            -- exhibitions
+            if exists (select 1 from information_schema.columns where table_name='exhibitions' and column_name='coverurl') then
+              execute 'alter table exhibitions rename column coverUrl to "coverUrl"';
+            end if;
+            if exists (select 1 from information_schema.columns where table_name='exhibitions' and column_name='painterid') then
+              execute 'alter table exhibitions rename column painterId to "painterId"';
+            end if;
+            if exists (select 1 from information_schema.columns where table_name='exhibitions' and column_name='ispublished') then
+              execute 'alter table exhibitions rename column isPublished to "isPublished"';
+            end if;
+            if exists (select 1 from information_schema.columns where table_name='exhibitions' and column_name='createdat') then
+              execute 'alter table exhibitions rename column createdAt to "createdAt"';
+            end if;
+
+            -- artworks
+            if exists (select 1 from information_schema.columns where table_name='artworks' and column_name='artistid') then
+              execute 'alter table artworks rename column artistId to "artistId"';
+            end if;
+            if exists (select 1 from information_schema.columns where table_name='artworks' and column_name='exhibitionid') then
+              execute 'alter table artworks rename column exhibitionId to "exhibitionId"';
+            end if;
+            if exists (select 1 from information_schema.columns where table_name='artworks' and column_name='imageurl') then
+              execute 'alter table artworks rename column imageUrl to "imageUrl"';
+            end if;
+            if exists (select 1 from information_schema.columns where table_name='artworks' and column_name='ispublished') then
+              execute 'alter table artworks rename column isPublished to "isPublished"';
+            end if;
+
+            -- ticket_categories
+            if exists (select 1 from information_schema.columns where table_name='ticket_categories' and column_name='isactive') then
+              execute 'alter table ticket_categories rename column isActive to "isActive"';
+            end if;
+
+            -- ticket_orders
+            if exists (select 1 from information_schema.columns where table_name='ticket_orders' and column_name='userid') then
+              execute 'alter table ticket_orders rename column userId to "userId"';
+            end if;
+            if exists (select 1 from information_schema.columns where table_name='ticket_orders' and column_name='categoryid') then
+              execute 'alter table ticket_orders rename column categoryId to "categoryId"';
+            end if;
+            if exists (select 1 from information_schema.columns where table_name='ticket_orders' and column_name='qrcode') then
+              execute 'alter table ticket_orders rename column qrCode to "qrCode"';
+            end if;
+            if exists (select 1 from information_schema.columns where table_name='ticket_orders' and column_name='createdat') then
+              execute 'alter table ticket_orders rename column createdAt to "createdAt"';
+            end if;
+          end $$;
+          SQL
+
+          cat > supabase/migrations/005_policies_camelcase.sql << 'SQL'
+          -- Re-create RLS policies referencing quoted camelCase columns
+
+          drop policy if exists "public read artists" on artists;
+          drop policy if exists "public read exhibitions" on exhibitions;
+          drop policy if exists "public read artworks" on artworks;
+          drop policy if exists "public read ticket categories" on ticket_categories;
+          drop policy if exists "admin all artists" on artists;
+          drop policy if exists "admin all exhibitions" on exhibitions;
+          drop policy if exists "admin all artworks" on artworks;
+          drop policy if exists "admin all ticket categories" on ticket_categories;
+          drop policy if exists "orders select own" on ticket_orders;
+          drop policy if exists "orders insert own" on ticket_orders;
+          drop policy if exists "orders update own" on ticket_orders;
+          drop policy if exists "orders admin all" on ticket_orders;
+
+          create policy "public read artists" on artists
+            for select using ( "isPublished" );
+
+          create policy "public read exhibitions" on exhibitions
+            for select using ( "isPublished" );
+
+          create policy "public read artworks" on artworks
+            for select using ( "isPublished" );
+
+          create policy "public read ticket categories" on ticket_categories
+            for select using ( "isActive" );
+
+          create policy "admin all artists" on artists
+            for all using ( is_admin() );
+
+          create policy "admin all exhibitions" on exhibitions
+            for all using ( is_admin() );
+
+          create policy "admin all artworks" on artworks
+            for all using ( is_admin() );
+
+          create policy "admin all ticket categories" on ticket_categories
+            for all using ( is_admin() );
+
+          create policy "orders select own" on ticket_orders
+            for select using ( "userId" = auth.uid() );
+
+          create policy "orders insert own" on ticket_orders
+            for insert with check ( "userId" = auth.uid() );
+
+          create policy "orders update own" on ticket_orders
+            for update using ( "userId" = auth.uid() );
+
+          create policy "orders admin all" on ticket_orders
+            for all using ( is_admin() );
+          SQL
+
+          cat > supabase/migrations/006_contacts.sql << 'SQL'
+          create table if not exists contact_messages (
+            id bigserial primary key,
+            "name" text not null,
+            "email" text not null,
+            "message" text not null,
+            "createdAt" timestamp with time zone default now()
+          );
+
+          alter table contact_messages enable row level security;
+
+          create policy "contact insert public" on contact_messages
+            for insert with check ( true );
+
+          create policy "contact admin read" on contact_messages
+            for select using ( is_admin() );
+          SQL
+
+          cat > pages/contacts.vue << 'VUE'
+          <script setup lang="ts">
+          const client = useSupabaseClient()
+
+          const name = ref('')
+          const email = ref('')
+          const message = ref('')
+          const success = ref('')
+          const errorMsg = ref('')
+          const sending = ref(false)
+
+          const validEmail = (v:string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
+
+          const submitForm = async () => {
+            success.value = ''
+            errorMsg.value = ''
+
+            if (!name.value.trim() || !validEmail(email.value) || !message.value.trim()) {
+              errorMsg.value = 'Будь ласка, заповніть всі поля коректно.'
+              return
+            }
+            sending.value = true
+            const { error } = await client.from('contact_messages').insert({
+              name: name.value.trim(),
+              email: email.value.trim(),
+              message: message.value.trim()
+            })
+            sending.value = false
+            if (error) {
+              errorMsg.value = error.message
+            } else {
+              success.value = 'Дякуємо! Ваше повідомлення надіслано.'
+              name.value = ''
+              email.value = ''
+              message.value = ''
+            }
+          }
+          </script>
+
+          <template>
+            <div class="max-w-800 mx-auto">
+              <h1 class="text-h4 mb-6">Контакти</h1>
+
+              <v-card class="mb-6 pa-4">
+                <div class="text-body-1">
+                  <strong>Адреса:</strong> вул. Прикладна, 1, Київ<br>
+                  <strong>Телефон:</strong> +380 (00) 000-00-00<br>
+                  <strong>Email:</strong> info@example.com<br>
+                  <strong>Години роботи:</strong> Вт–Нд 11:00–19:00 (Пн — вихідний)
+                </div>
+              </v-card>
+
+              <v-card class="pa-4">
+                <div class="text-h6 mb-4">Напишіть нам</div>
+                <v-text-field v-model="name" label="Ваше ім’я" />
+                <v-text-field v-model="email" label="Email" type="email" />
+                <v-textarea v-model="message" label="Повідомлення" rows="5" />
+                <v-alert v-if="errorMsg" type="error" :text="errorMsg" class="mb-2" />
+                <v-alert v-if="success" type="success" :text="success" class="mb-2" />
+                <v-btn :loading="sending" color="primary" @click="submitForm">Надіслати</v-btn>
+              </v-card>
+            </div>
+          </template>
+          VUE
+
+      - name: Commit & push
+        run: |
+          git config user.name "gallery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add supabase/migrations/*.sql pages/contacts.vue
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin HEAD:${{ github.event.inputs.branch }}
