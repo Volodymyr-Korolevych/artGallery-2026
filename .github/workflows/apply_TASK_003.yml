@@ -1,0 +1,554 @@
+name: Apply TASK-003 (admin-only forms, admin menu link, storage paths, dates, images, spacing)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to commit to'
+        required: true
+        default: 'main'
+      commit_message:
+        description: 'Commit message'
+        required: true
+        default: 'TASK-003: admin-only forms & deletes, admin menu item, storage path by entity, exhibitions dates, artist/artwork images, spacing fix'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Create SQL migrations
+        run: |
+          mkdir -p supabase/migrations
+
+          # 010: Storage delete -> admin only (drop prev delete policy, create admin-only)
+          cat > supabase/migrations/010_storage_admin_delete.sql << 'SQL'
+          -- make delete in images bucket admin-only
+          drop policy if exists "images auth delete" on storage.objects;
+          drop policy if exists "images admin delete" on storage.objects;
+          create policy "images admin delete"
+          on storage.objects for delete
+          using (bucket_id = 'images' and is_admin());
+          SQL
+
+          # 011: Exhibitions dates (startDate, endDate)
+          cat > supabase/migrations/011_exhibitions_dates.sql << 'SQL'
+          do $$
+          begin
+            if not exists (
+              select 1 from information_schema.columns
+              where table_name='exhibitions' and column_name='startdate'
+            ) then
+              execute 'alter table exhibitions add column "startDate" timestamptz';
+            end if;
+            if not exists (
+              select 1 from information_schema.columns
+              where table_name='exhibitions' and column_name='enddate'
+            ) then
+              execute 'alter table exhibitions add column "endDate" timestamptz';
+            end if;
+          end $$;
+          SQL
+
+          # 012: Artists portraitUrl (ensure column present)
+          cat > supabase/migrations/012_artists_portrait_url.sql << 'SQL'
+          do $$
+          begin
+            if not exists (
+              select 1 from information_schema.columns
+              where table_name='artists' and column_name='portraiturl'
+            ) then
+              execute 'alter table artists add column "portraitUrl" text';
+            end if;
+          end $$;
+          SQL
+
+          # 013: Artworks imageUrl (ensure column present)
+          cat > supabase/migrations/013_artworks_image_url.sql << 'SQL'
+          do $$
+          begin
+            if not exists (
+              select 1 from information_schema.columns
+              where table_name='artworks' and column_name='imageurl'
+            ) then
+              execute 'alter table artworks add column "imageUrl" text';
+            end if;
+          end $$;
+          SQL
+
+      - name: Add/Update app files
+        run: |
+          mkdir -p composables middleware components pages/admin layouts
+
+          # ---------- middleware: admin-only guard for all /admin routes ----------
+          cat > middleware/admin-only.global.ts << 'TS'
+          export default defineNuxtRouteMiddleware(async (to) => {
+            if (!to.path.startsWith('/admin')) return
+            const user = useSupabaseUser()
+            const supabase = useSupabaseClient()
+            if (!user.value) return navigateTo('/login')
+            const { data } = await supabase.from('profiles').select('role').eq('id', user.value.id).maybeSingle()
+            if (data?.role !== 'admin') return navigateTo('/')
+          })
+          TS
+
+          # ---------- composable: smarter uploads with deterministic paths ----------
+          cat > composables/useStorageUpload.ts << 'TS'
+          export function useStorageUpload() {
+            const supabase = useSupabaseClient()
+            const user = useSupabaseUser()
+            const BUCKET = 'images'
+            const ensureAuth = () => {
+              if (!user.value) throw new Error('Потрібно увійти в систему')
+            }
+            const toSlug = (s:string) =>
+              s.toLowerCase().trim().replace(/[^a-zа-яіїє0-9]+/gi,'-').replace(/^-+|-+$/g,'')
+            const put = async (path:string, file: File) => {
+              ensureAuth()
+              const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type })
+              if (error) throw error
+              const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path)
+              return pub.publicUrl
+            }
+            return {
+              toSlug,
+              uploadCoverForExhibition: (exhIdOrSlug:string|number, file:File) => put(`exhibitions/${exhIdOrSlug}/cover.jpg`, file),
+              uploadCardForExhibition:  (exhIdOrSlug:string|number, file:File) => put(`exhibitions/${exhIdOrSlug}/card.jpg`, file),
+              uploadArtistPortrait:     (artistId:number|string, file:File)      => put(`artists/${artistId}/portrait.jpg`, file),
+              uploadArtworkImage:       (artId:number|string, file:File)         => put(`artworks/${artId}/image.jpg`, file),
+            }
+          }
+          TS
+
+          # ---------- layout spacing fix: ensure pages not under header ----------
+          cat > layouts/default.vue << 'VUE'
+          <template>
+            <v-app>
+              <AppHeader />
+              <v-main class="pt-16">
+                <slot />
+              </v-main>
+            </v-app>
+          </template>
+          VUE
+
+          # ---------- header: add Admin Panel link in menu for admin users ----------
+          cat > components/AppHeader.vue << 'VUE'
+          <script setup lang="ts">
+          const user = useSupabaseUser()
+          const supabase = useSupabaseClient()
+          const profile = ref<{ username?: string, role?: string } | null>(null)
+          const menu = ref(false)
+
+          const fetchProfile = async () => {
+            if (!user.value) { profile.value = null; return }
+            const { data } = await supabase.from('profiles').select('username, role').eq('id', user.value.id).maybeSingle()
+            profile.value = data
+          }
+          watchEffect(fetchProfile)
+
+          const logout = async () => {
+            await supabase.auth.signOut()
+            navigateTo('/')
+          }
+          </script>
+
+          <template>
+            <v-app-bar color="primary" density="comfortable" flat>
+              <v-toolbar-title class="font-weight-bold">Art Gallery</v-toolbar-title>
+              <v-spacer />
+              <v-btn variant="text" to="/">Головна</v-btn>
+              <v-btn variant="text" to="/exhibitions/current">Поточна</v-btn>
+              <v-btn variant="text" to="/exhibitions/past">Минулі</v-btn>
+              <v-btn variant="text" to="/exhibitions/upcoming">Майбутні</v-btn>
+              <v-btn variant="text" to="/artists">Художники</v-btn>
+              <v-btn variant="text" to="/tickets">Квитки</v-btn>
+              <v-btn variant="text" to="/contacts">Контакти</v-btn>
+
+              <div class="ml-2">
+                <template v-if="!user">
+                  <v-btn color="secondary" to="/login">Увійти</v-btn>
+                </template>
+                <template v-else>
+                  <v-menu v-model="menu" :close-on-content-click="true" location="bottom">
+                    <template #activator="{ props }">
+                      <v-btn v-bind="props" color="secondary">
+                        {{ profile?.username || 'Кабінет' }}
+                      </v-btn>
+                    </template>
+                    <v-list>
+                      <v-list-item v-if="profile?.role==='admin'" to="/admin">Адмін-панель</v-list-item>
+                      <v-list-item @click="logout">Вийти</v-list-item>
+                    </v-list>
+                  </v-menu>
+                </template>
+              </div>
+            </v-app-bar>
+          </template>
+          VUE
+
+          # ---------- admin: exhibitions (dates, storage paths by id, selects, admin-only UI) ----------
+          cat > pages/admin/exhibitions.vue << 'VUE'
+          <script setup lang="ts">
+          const supabase = useSupabaseClient()
+          const user = useSupabaseUser()
+          const { uploadCoverForExhibition, uploadCardForExhibition } = useStorageUpload()
+
+          const items = ref<any[]>([])
+          const artists = ref<any[]>([])
+          const dialog = ref(false)
+          const edited = ref<any>({})
+
+          const canEdit = ref(false)
+          onMounted(async () => {
+            // admin gate
+            if (!user.value) return navigateTo('/login')
+            const { data } = await supabase.from('profiles').select('role').eq('id', user.value.id).maybeSingle()
+            if (data?.role !== 'admin') return navigateTo('/')
+            canEdit.value = true
+            await fetchAll()
+          })
+
+          const fetchAll = async () => {
+            const { data } = await supabase.from('exhibitions').select('*').order('createdAt', { ascending: false })
+            items.value = data || []
+            const { data: a } = await supabase.from('artists').select('id, fullName')
+            artists.value = a || []
+          }
+
+          const newItem = () => { edited.value = { title:'', painterId:null, isPublished:true, coverUrl:'', cardUrl:'', startDate:null, endDate:null }; dialog.value = true }
+          const editItem = (it:any) => { edited.value = { ...it }; dialog.value = true }
+
+          const save = async () => {
+            const payload = { ...edited.value }
+            if (!payload.id) {
+              const { data, error } = await supabase.from('exhibitions').insert(payload).select('*').single()
+              if (!error) { items.value.unshift(data!) }
+            } else {
+              const { data, error } = await supabase.from('exhibitions').update(payload).eq('id', payload.id).select('*').single()
+              if (!error) {
+                const idx = items.value.findIndex(i => i.id === payload.id)
+                if (idx>-1) items.value[idx] = data!
+              }
+            }
+            dialog.value = false
+          }
+
+          const del = async (it:any) => {
+            await supabase.from('exhibitions').delete().eq('id', it.id)
+            items.value = items.value.filter(x => x.id !== it.id)
+            // (optional) you may also call a RPC to cleanup folder exhibitions/{id} in storage (admin-only)
+          }
+
+          const pickCover = async (e:Event) => {
+            const f = (e.target as HTMLInputElement).files?.[0]; if (!f || !edited.value.id) return
+            edited.value.coverUrl = await uploadCoverForExhibition(edited.value.id, f)
+          }
+          const pickCard = async (e:Event) => {
+            const f = (e.target as HTMLInputElement).files?.[0]; if (!f || !edited.value.id) return
+            edited.value.cardUrl = await uploadCardForExhibition(edited.value.id, f)
+          }
+          </script>
+
+          <template>
+            <div class="pa-6">
+              <div class="d-flex align-center justify-space-between mb-4">
+                <h1 class="text-h5">Виставки</h1>
+                <v-btn color="primary" v-if="canEdit" @click="newItem">Додати</v-btn>
+              </div>
+
+              <v-data-table :items="items" :headers="[
+                { title:'ID', value:'id' },
+                { title:'Назва', value:'title' },
+                { title:'Художник', value:'painterId' },
+                { title:'Початок', value:'startDate' },
+                { title:'Кінець', value:'endDate' },
+                { title:'Опубліковано', value:'isPublished' },
+                { title:'Дії', value:'actions', sortable:false }
+              ]">
+                <template #item.painterId="{ item }">
+                  <span>{{ (artists.find(a=>a.id===item.painterId)?.fullName) || '—' }}</span>
+                </template>
+                <template #item.startDate="{ item }">
+                  <span>{{ item.startDate ? new Date(item.startDate).toLocaleDateString() : '—' }}</span>
+                </template>
+                <template #item.endDate="{ item }">
+                  <span>{{ item.endDate ? new Date(item.endDate).toLocaleDateString() : '—' }}</span>
+                </template>
+                <template #item.isPublished="{ item }">
+                  <v-chip :color="item.isPublished ? 'green' : 'grey'">{{ item.isPublished ? 'Так' : 'Ні' }}</v-chip>
+                </template>
+                <template #item.actions="{ item }">
+                  <v-btn size="small" variant="text" v-if="canEdit" @click="editItem(item)">Редагувати</v-btn>
+                  <v-btn size="small" variant="text" v-if="canEdit" color="error" @click="del(item)">Видалити</v-btn>
+                </template>
+              </v-data-table>
+
+              <v-dialog v-model="dialog" max-width="760">
+                <v-card class="pa-4">
+                  <div class="text-h6 mb-3">{{ edited.id ? 'Редагувати' : 'Створити' }} виставку</div>
+
+                  <v-text-field v-model="edited.title" label="Назва" />
+                  <v-select
+                    v-model="edited.painterId"
+                    :items="artists"
+                    item-title="fullName"
+                    item-value="id"
+                    label="Художник"
+                  />
+                  <v-text-field v-model="edited.startDate" type="date" label="Дата початку" />
+                  <v-text-field v-model="edited.endDate" type="date" label="Дата завершення" />
+                  <v-switch v-model="edited.isPublished" label="Опубліковано" />
+
+                  <div class="d-flex gap-4">
+                    <div class="flex-1">
+                      <div class="text-subtitle-2 mb-1">Cover (широкий банер)</div>
+                      <input type="file" accept="image/*" @change="pickCover" :disabled="!edited.id" />
+                      <div class="mt-2" v-if="edited.coverUrl"><img :src="edited.coverUrl" style="max-width:100%" /></div>
+                    </div>
+                    <div class="flex-1">
+                      <div class="text-subtitle-2 mb-1">Card (картка у стрічці)</div>
+                      <input type="file" accept="image/*" @change="pickCard" :disabled="!edited.id" />
+                      <div class="mt-2" v-if="edited.cardUrl"><img :src="edited.cardUrl" style="max-width:100%" /></div>
+                    </div>
+                  </div>
+
+                  <div class="d-flex justify-end mt-4">
+                    <v-btn variant="text" class="mr-2" @click="dialog=false">Скасувати</v-btn>
+                    <v-btn color="primary" @click="save">Зберегти</v-btn>
+                  </div>
+                </v-card>
+              </v-dialog>
+            </div>
+          </template>
+
+          <style scoped>
+          .gap-4 { gap: 16px; }
+          .flex-1 { flex: 1; }
+          </style>
+          VUE
+
+          # ---------- admin: artists (portrait upload) ----------
+          cat > pages/admin/artists.vue << 'VUE'
+          <script setup lang="ts">
+          const supabase = useSupabaseClient()
+          const user = useSupabaseUser()
+          const { uploadArtistPortrait } = useStorageUpload()
+
+          const items = ref<any[]>([])
+          const dialog = ref(false)
+          const edited = ref<any>({})
+
+          const canEdit = ref(false)
+          onMounted(async () => {
+            if (!user.value) return navigateTo('/login')
+            const { data } = await supabase.from('profiles').select('role').eq('id', user.value.id).maybeSingle()
+            if (data?.role !== 'admin') return navigateTo('/')
+            canEdit.value = true
+            await fetchAll()
+          })
+
+          const fetchAll = async () => {
+            const { data } = await supabase.from('artists').select('*').order('id', { ascending: false })
+            items.value = data || []
+          }
+
+          const newItem = () => { edited.value = { fullName:'', portraitUrl:'', isPublished:true }; dialog.value = true }
+          const editItem = (it:any) => { edited.value = { ...it }; dialog.value = true }
+
+          const save = async () => {
+            const payload = { ...edited.value }
+            if (!payload.id) {
+              const { data, error } = await supabase.from('artists').insert(payload).select('*').single()
+              if (!error) items.value.unshift(data!)
+            } else {
+              const { data, error } = await supabase.from('artists').update(payload).eq('id', payload.id).select('*').single()
+              if (!error) {
+                const idx = items.value.findIndex(i => i.id === payload.id)
+                if (idx>-1) items.value[idx] = data!
+              }
+            }
+            dialog.value = false
+          }
+
+          const pickPortrait = async (e:Event) => {
+            const f = (e.target as HTMLInputElement).files?.[0]; if (!f || !edited.value.id) return
+            edited.value.portraitUrl = await uploadArtistPortrait(edited.value.id, f)
+          }
+          </script>
+
+          <template>
+            <div class="pa-6">
+              <div class="d-flex align-center justify-space-between mb-4">
+                <h1 class="text-h5">Художники</h1>
+                <v-btn color="primary" v-if="canEdit" @click="newItem">Додати</v-btn>
+              </div>
+
+              <v-data-table :items="items" :headers="[
+                { title:'ID', value:'id' },
+                { title:'Імʼя', value:'fullName' },
+                { title:'Опубліковано', value:'isPublished' },
+                { title:'Дії', value:'actions', sortable:false }
+              ]">
+                <template #item.isPublished="{ item }">
+                  <v-chip :color="item.isPublished ? 'green' : 'grey'">{{ item.isPublished ? 'Так' : 'Ні' }}</v-chip>
+                </template>
+                <template #item.actions="{ item }">
+                  <v-btn size="small" variant="text" v-if="canEdit" @click="editItem(item)">Редагувати</v-btn>
+                </template>
+              </v-data-table>
+
+              <v-dialog v-model="dialog" max-width="700">
+                <v-card class="pa-4">
+                  <div class="text-h6 mb-3">{{ edited.id ? 'Редагувати' : 'Створити' }} художника</div>
+
+                  <v-text-field v-model="edited.fullName" label="Імʼя та прізвище" />
+                  <v-switch v-model="edited.isPublished" label="Опубліковано" />
+
+                  <div>
+                    <div class="text-subtitle-2 mb-1">Портрет</div>
+                    <input type="file" accept="image/*" @change="pickPortrait" :disabled="!edited.id" />
+                    <div class="mt-2" v-if="edited.portraitUrl"><img :src="edited.portraitUrl" style="max-width:100%" /></div>
+                  </div>
+
+                  <div class="d-flex justify-end mt-4">
+                    <v-btn variant="text" class="mr-2" @click="dialog=false">Скасувати</v-btn>
+                    <v-btn color="primary" @click="save">Зберегти</v-btn>
+                  </div>
+                </v-card>
+              </v-dialog>
+            </div>
+          </template>
+          VUE
+
+          # ---------- admin: artworks (image upload) ----------
+          cat > pages/admin/artworks.vue << 'VUE'
+          <script setup lang="ts">
+          const supabase = useSupabaseClient()
+          const user = useSupabaseUser()
+          const { uploadArtworkImage } = useStorageUpload()
+
+          const arts = ref<any[]>([])
+          const artists = ref<any[]>([])
+          const exhibitions = ref<any[]>([])
+          const dialog = ref(false)
+          const edited = ref<any>({})
+
+          const canEdit = ref(false)
+          onMounted(async () => {
+            if (!user.value) return navigateTo('/login')
+            const { data } = await supabase.from('profiles').select('role').eq('id', user.value.id).maybeSingle()
+            if (data?.role !== 'admin') return navigateTo('/')
+            canEdit.value = true
+            await fetchAll()
+          })
+
+          const fetchAll = async () => {
+            const { data } = await supabase.from('artworks').select('*').order('id', { ascending: false })
+            arts.value = data || []
+            const { data: a } = await supabase.from('artists').select('id, fullName')
+            artists.value = a || []
+            const { data: e } = await supabase.from('exhibitions').select('id, title')
+            exhibitions.value = e || []
+          }
+
+          const newItem = () => { edited.value = { title:'', artistId:null, exhibitionId:null, isPublished:true, imageUrl:'' }; dialog.value = true }
+          const editItem = (it:any) => { edited.value = { ...it }; dialog.value = true }
+
+          const save = async () => {
+            const payload = { ...edited.value }
+            if (!payload.id) {
+              const { data, error } = await supabase.from('artworks').insert(payload).select('*').single()
+              if (!error) arts.value.unshift(data!)
+            } else {
+              const { data, error } = await supabase.from('artworks').update(payload).eq('id', payload.id).select('*').single()
+              if (!error) {
+                const idx = arts.value.findIndex(i => i.id === payload.id)
+                if (idx>-1) arts.value[idx] = data!
+              }
+            }
+            dialog.value = false
+          }
+
+          const pickImage = async (e:Event) => {
+            const f = (e.target as HTMLInputElement).files?.[0]; if (!f || !edited.value.id) return
+            edited.value.imageUrl = await uploadArtworkImage(edited.value.id, f)
+          }
+          </script>
+
+          <template>
+            <div class="pa-6">
+              <div class="d-flex align-center justify-space-between mb-4">
+                <h1 class="text-h5">Роботи</h1>
+                <v-btn color="primary" v-if="canEdit" @click="newItem">Додати</v-btn>
+              </div>
+
+              <v-data-table :items="arts" :headers="[
+                { title:'ID', value:'id' },
+                { title:'Назва', value:'title' },
+                { title:'Художник', value:'artistId' },
+                { title:'Виставка', value:'exhibitionId' },
+                { title:'Опубліковано', value:'isPublished' },
+                { title:'Дії', value:'actions', sortable:false }
+              ]">
+                <template #item.isPublished="{ item }">
+                  <v-chip :color="item.isPublished ? 'green' : 'grey'">{{ item.isPublished ? 'Так' : 'Ні' }}</v-chip>
+                </template>
+                <template #item.actions="{ item }">
+                  <v-btn size="small" variant="text" v-if="canEdit" @click="editItem(item)">Редагувати</v-btn>
+                </template>
+              </v-data-table>
+
+              <v-dialog v-model="dialog" max-width="760">
+                <v-card class="pa-4">
+                  <div class="text-h6 mb-3">{{ edited.id ? 'Редагувати' : 'Створити' }} роботу</div>
+
+                  <v-text-field v-model="edited.title" label="Назва" />
+                  <v-select v-model="edited.artistId" :items="artists" item-title="fullName" item-value="id" label="Художник" />
+                  <v-select v-model="edited.exhibitionId" :items="exhibitions" item-title="title" item-value="id" label="Виставка" />
+                  <v-switch v-model="edited.isPublished" label="Опубліковано" />
+
+                  <div>
+                    <div class="text-subtitle-2 mb-1">Зображення роботи</div>
+                    <input type="file" accept="image/*" @change="pickImage" :disabled="!edited.id" />
+                    <div class="mt-2" v-if="edited.imageUrl"><img :src="edited.imageUrl" style="max-width:100%" /></div>
+                  </div>
+
+                  <div class="d-flex justify-end mt-4">
+                    <v-btn variant="text" class="mr-2" @click="dialog=false">Скасувати</v-btn>
+                    <v-btn color="primary" @click="save">Зберегти</v-btn>
+                  </div>
+                </v-card>
+              </v-dialog>
+            </div>
+          </template>
+          VUE
+
+      - name: Commit & push
+        run: |
+          git config user.name "gallery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add \
+            supabase/migrations/*.sql \
+            middleware/admin-only.global.ts \
+            composables/useStorageUpload.ts \
+            layouts/default.vue \
+            components/AppHeader.vue \
+            pages/admin/exhibitions.vue \
+            pages/admin/artists.vue \
+            pages/admin/artworks.vue
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin HEAD:${{ github.event.inputs.branch }}
