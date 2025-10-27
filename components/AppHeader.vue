@@ -1,14 +1,15 @@
 <script setup lang="ts">
 const user = useSupabaseUser()
 const supabase = useSupabaseClient()
-const profile = ref<{ username?: string } | null>(null)
+const profile = ref<{ username?: string, role?: string } | null>(null)
 const menu = ref(false)
 
-watchEffect(async () => {
+const fetchProfile = async () => {
   if (!user.value) { profile.value = null; return }
-  const { data } = await supabase.from('profiles').select('username').eq('id', user.value.id).maybeSingle()
+  const { data } = await supabase.from('profiles').select('username, role').eq('id', user.value.id).maybeSingle()
   profile.value = data
-})
+}
+watchEffect(fetchProfile)
 
 const logout = async () => {
   await supabase.auth.signOut()
@@ -40,6 +41,7 @@ const logout = async () => {
             </v-btn>
           </template>
           <v-list>
+            <v-list-item v-if="profile?.role==='admin'" to="/admin">Адмін-панель</v-list-item>
             <v-list-item @click="logout">Вийти</v-list-item>
           </v-list>
         </v-menu>

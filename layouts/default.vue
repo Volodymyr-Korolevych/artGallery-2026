@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <AppHeader />
-    <v-main class="pt-12">
+    <v-main class="pt-16">
       <slot />
     </v-main>
   </v-app>
