@@ -1,55 +1,115 @@
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth' })
-const client = useSupabaseClient()
-const { data: items, refresh } = await useAsyncData('exhibitionsAdmin', async () => {
-  const { data } = await client.from('exhibitions').select('*').order('startDate', { ascending: false })
-  return data || []
-})
-const model = ref<any>({ isPublished: true, status: 'upcoming' })
-const dialog = ref(false)
+const supabase = useSupabaseClient()
+const { uploadFile } = useStorageUpload()
 
-async function save() {
-  if (model.value.id) {
-    await client.from('exhibitions').update(model.value).eq('id', model.value.id)
+const items = ref<any[]>([])
+const artists = ref<any[]>([])
+const dialog = ref(false)
+const edited = ref<any>({})
+
+const fetchAll = async () => {
+  const { data } = await supabase.from('exhibitions').select('*').order('createdAt', { ascending: false })
+  items.value = data || []
+  const { data: a } = await supabase.from('artists').select('id, fullName')
+  artists.value = a || []
+}
+
+onMounted(fetchAll)
+
+const newItem = () => { edited.value = { title:'', painterId: null, isPublished: true, coverUrl:'', cardUrl:'' }; dialog.value = true }
+const editItem = (it:any) => { edited.value = { ...it }; dialog.value = true }
+
+const save = async () => {
+  const payload = { ...edited.value }
+  if (!payload.id) {
+    const { data, error } = await supabase.from('exhibitions').insert(payload).select('*').single()
+    if (!error) { items.value.unshift(data!) }
   } else {
-    await client.from('exhibitions').insert(model.value)
+    const { data, error } = await supabase.from('exhibitions').update(payload).eq('id', payload.id).select('*').single()
+    if (!error) {
+      const idx = items.value.findIndex(i => i.id === payload.id)
+      if (idx>-1) items.value[idx] = data!
+    }
   }
   dialog.value = false
-  model.value = { isPublished: true, status: 'upcoming' }
-  await refresh()
 }
-async function edit(it:any){ model.value = { ...it }; dialog.value = true }
-async function del(id:number){ await client.from('exhibitions').delete().eq('id', id); await refresh() }
+
+const del = async (it:any) => {
+  await supabase.from('exhibitions').delete().eq('id', it.id)
+  items.value = items.value.filter(x => x.id !== it.id)
+}
+
+const onPick = async (e:Event, field:'coverUrl'|'cardUrl') => {
+  const f = (e.target as HTMLInputElement).files?.[0]
+  if (!f) return
+  const url = await uploadFile(f, 'exhibitions')
+  edited.value[field] = url
+}
 </script>
 
 <template>
-  <div>
-    <div class="d-flex justify-space-between align-center mb-4">
-      <h1 class="text-h5">Експозиції</h1>
-      <v-btn color="primary" @click="dialog=true">Додати</v-btn>
+  <div class="pa-6">
+    <div class="d-flex align-center justify-space-between mb-4">
+      <h1 class="text-h5">Виставки</h1>
+      <v-btn color="primary" @click="newItem">Додати</v-btn>
     </div>
+
     <v-data-table :items="items" :headers="[
-      { title: 'Назва', key: 'title' },
-      { title: 'Статус', key: 'status' },
-      { title: 'Період', key: 'startDate' }
+      { title:'ID', value:'id' },
+      { title:'Назва', value:'title' },
+      { title:'Художник', value:'painterId' },
+      { title:'Опубліковано', value:'isPublished' },
+      { title:'Дії', value:'actions', sortable: false }
     ]">
+      <template #item.painterId="{ item }">
+        <span>{{ artists.find(a=>a.id===item.painterId)?.fullName || '—' }}</span>
+      </template>
+      <template #item.isPublished="{ item }">
+        <v-chip :color="item.isPublished ? 'green' : 'grey'">{{ item.isPublished ? 'Так' : 'Ні' }}</v-chip>
+      </template>
       <template #item.actions="{ item }">
-        <v-btn size="small" @click="edit(item)">Ред.</v-btn>
-        <v-btn size="small" color="error" @click="del(item.id)">Вид.</v-btn>
+        <v-btn size="small" variant="text" @click="editItem(item)">Редагувати</v-btn>
+        <v-btn size="small" variant="text" color="error" @click="del(item)">Видалити</v-btn>
       </template>
     </v-data-table>
 
-    <v-dialog v-model="dialog" max-width="640">
+    <v-dialog v-model="dialog" max-width="700">
       <v-card class="pa-4">
-        <v-text-field v-model="model.title" label="Title" />
-        <v-text-field v-model="model.slug" label="Slug" />
-        <v-textarea v-model="model.description" label="Description" />
-        <v-select :items="['current','past','upcoming']" v-model="model.status" label="Status" />
-        <v-text-field v-model="model.startDate" label="Start (YYYY-MM-DD)" />
-        <v-text-field v-model="model.endDate" label="End (YYYY-MM-DD)" />
-        <v-switch v-model="model.isPublished" label="Published" />
-        <v-btn color="primary" @click="save">Зберегти</v-btn>
+        <div class="text-h6 mb-3">{{ edited.id ? 'Редагувати' : 'Створити' }} виставку</div>
+
+        <v-text-field v-model="edited.title" label="Назва" />
+        <v-select
+          v-model="edited.painterId"
+          :items="artists"
+          item-title="fullName"
+          item-value="id"
+          label="Художник"
+        />
+        <v-switch v-model="edited.isPublished" label="Опубліковано" />
+
+        <div class="d-flex gap-4">
+          <div class="flex-1">
+            <div class="text-subtitle-2 mb-1">Cover (широкий банер)</div>
+            <input type="file" accept="image/*" @change="e=>onPick(e,'coverUrl')" />
+            <div class="mt-2" v-if="edited.coverUrl"><img :src="edited.coverUrl" style="max-width:100%" /></div>
+          </div>
+          <div class="flex-1">
+            <div class="text-subtitle-2 mb-1">Card (картка у стрічці)</div>
+            <input type="file" accept="image/*" @change="e=>onPick(e,'cardUrl')" />
+            <div class="mt-2" v-if="edited.cardUrl"><img :src="edited.cardUrl" style="max-width:100%" /></div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-end mt-4">
+          <v-btn variant="text" class="mr-2" @click="dialog=false">Скасувати</v-btn>
+          <v-btn color="primary" @click="save">Зберегти</v-btn>
+        </div>
       </v-card>
     </v-dialog>
   </div>
 </template>
+
+<style scoped>
+.gap-4 { gap: 16px; }
+.flex-1 { flex: 1; }
+</style>

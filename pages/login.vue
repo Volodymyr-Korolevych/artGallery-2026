@@ -1,34 +1,66 @@
 <script setup lang="ts">
-const client = useSupabaseClient()
+const supabase = useSupabaseClient()
 const user = useSupabaseUser()
-const router = useRouter()
-const route = useRoute()
+
 const email = ref('')
 const password = ref('')
-const loading = ref(false)
-const err = ref('')
+const username = ref('')
 
-watch(user, () => {
+const err = ref('')
+const loading = ref(false)
+const tab = ref<'signin'|'signup'>('signin')
+
+watchEffect(() => {
   if (user.value) {
-    router.push((route.query.next as string) || '/')
+    navigateTo('/')
   }
 })
 
-const onLogin = async () => {
-  loading.value = true
-  err.value = ''
-  const { error } = await client.auth.signInWithPassword({ email: email.value, password: password.value })
+const signIn = async () => {
+  err.value = ''; loading.value = true
+  const { error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value })
   loading.value = false
-  if (error) err.value = error.message
+  if (error) { err.value = error.message; return }
+  // admin redirect handled by redirect-admin.global middleware when navigating from /login to /
+  navigateTo('/')
+}
+
+const signUp = async () => {
+  err.value=''; loading.value = true
+  const uname = username.value.trim() || email.value.split('@')[0]
+  const { error } = await supabase.auth.signUp({
+    email: email.value,
+    password: password.value,
+    options: { data: { username: uname } }
+  })
+  loading.value = false
+  if (error) { err.value = error.message; return }
+  navigateTo('/')
 }
 </script>
 
 <template>
-  <v-container class="max-w-480">
-    <h1 class="text-h5 mb-4">Вхід</h1>
-    <v-text-field v-model="email" label="Email" type="email" />
-    <v-text-field v-model="password" label="Пароль" type="password" />
-    <v-alert v-if="err" type="error" :text="err" class="mb-2" />
-    <v-btn :loading="loading" @click="onLogin" color="primary">Увійти</v-btn>
-  </v-container>
+  <div class="max-w-600 mx-auto py-8">
+    <v-card class="pa-6">
+      <v-tabs v-model="tab" class="mb-4">
+        <v-tab value="signin">Увійти</v-tab>
+        <v-tab value="signup">Зареєструватися</v-tab>
+      </v-tabs>
+
+      <div v-if="tab==='signin'">
+        <v-text-field v-model="email" label="Email" type="email" />
+        <v-text-field v-model="password" label="Пароль" type="password" />
+        <v-alert v-if="err" type="error" :text="err" class="mb-2" />
+        <v-btn :loading="loading" color="primary" @click="signIn">Увійти</v-btn>
+      </div>
+
+      <div v-else>
+        <v-text-field v-model="email" label="Email" type="email" />
+        <v-text-field v-model="username" label="Username (можна залишити порожнім)" />
+        <v-text-field v-model="password" label="Пароль" type="password" />
+        <v-alert v-if="err" type="error" :text="err" class="mb-2" />
+        <v-btn :loading="loading" color="primary" @click="signUp">Зареєструватися</v-btn>
+      </div>
+    </v-card>
+  </div>
 </template>

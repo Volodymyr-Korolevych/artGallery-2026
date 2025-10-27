@@ -1,12 +1,49 @@
+<script setup lang="ts">
+const user = useSupabaseUser()
+const supabase = useSupabaseClient()
+const profile = ref<{ username?: string } | null>(null)
+const menu = ref(false)
+
+watchEffect(async () => {
+  if (!user.value) { profile.value = null; return }
+  const { data } = await supabase.from('profiles').select('username').eq('id', user.value.id).maybeSingle()
+  profile.value = data
+})
+
+const logout = async () => {
+  await supabase.auth.signOut()
+  navigateTo('/')
+}
+</script>
+
 <template>
-  <v-app-bar density="comfortable" flat>
-    <v-app-bar-title>Галерея</v-app-bar-title>
-    <v-spacer></v-spacer>
-    <v-btn to="/" variant="text">Про нас</v-btn>
-    <v-btn to="/exhibitions/current" variant="text">Виставки</v-btn>
-    <v-btn to="/tickets" variant="text">Придбати квитки</v-btn>
-    <v-btn to="/contacts" variant="text">Контакти</v-btn>
-    <v-divider vertical class="mx-2" />
-    <AuthButton />
+  <v-app-bar color="primary" density="comfortable" flat>
+    <v-toolbar-title class="font-weight-bold">Art Gallery</v-toolbar-title>
+    <v-spacer />
+    <v-btn variant="text" to="/">Головна</v-btn>
+    <v-btn variant="text" to="/exhibitions/current">Поточна</v-btn>
+    <v-btn variant="text" to="/exhibitions/past">Минулі</v-btn>
+    <v-btn variant="text" to="/exhibitions/upcoming">Майбутні</v-btn>
+    <v-btn variant="text" to="/artists">Художники</v-btn>
+    <v-btn variant="text" to="/tickets">Квитки</v-btn>
+    <v-btn variant="text" to="/contacts">Контакти</v-btn>
+
+    <div class="ml-2">
+      <template v-if="!user">
+        <v-btn color="secondary" to="/login">Увійти</v-btn>
+      </template>
+      <template v-else>
+        <v-menu v-model="menu" :close-on-content-click="true" location="bottom">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" color="secondary">
+              {{ profile?.username || 'Кабінет' }}
+            </v-btn>
+          </template>
+          <v-list>
+            <v-list-item @click="logout">Вийти</v-list-item>
+          </v-list>
+        </v-menu>
+      </template>
+    </div>
   </v-app-bar>
 </template>
