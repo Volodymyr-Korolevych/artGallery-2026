@@ -1,0 +1,73 @@
+name: Apply TASK-004-A1 (fix route conflict + full-width admin content)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to commit to'
+        required: true
+        default: 'main'
+      commit_message:
+        description: 'Commit message'
+        required: true
+        default: 'TASK-004-A1: remove old /admin/exhibitions.vue and make admin content full-width'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Fix routes and styles
+        run: |
+          # 1) Remove old conflicting route file if it exists
+          rm -f pages/admin/exhibitions.vue
+
+          # 2) Ensure admin layout content is truly full-width
+          #    - grid: 280px sidebar + minmax(0, 1fr) content
+          #    - .admin-content: width:100%; max-width:none; padding adjustable
+          #    - remove any accidental container constraints
+          awk '1' layouts/admin.vue > /tmp/admin.vue || true
+          if grep -q "grid-template-columns" /tmp/admin.vue; then
+            sed -i 's/grid-template-columns:[^;]*/grid-template-columns: 280px minmax(0, 1fr)/' /tmp/admin.vue
+          fi
+          # Inject/replace admin-content style block safely
+          # If .admin-content exists, replace its CSS block; else append.
+          if grep -q ".admin-content" /tmp/admin.vue; then
+            # Replace admin-content rules
+            sed -i 's/\.admin-content[^{]*{[^}]*}/.admin-content { padding: 24px; width: 100%; max-width: none; min-width: 0; overflow: auto; }/' /tmp/admin.vue
+          else
+            # Append block before closing </style>
+            sed -i 's@</style>@.admin-content { padding: 24px; width: 100%; max-width: none; min-width: 0; overflow: auto; }\n</style>@' /tmp/admin.vue
+          fi
+          mv /tmp/admin.vue layouts/admin.vue
+
+          # 3) Make exhibitions list card truly span width
+          #    Ensure no accidental containers or max-widths
+          if [ -f pages/admin/exhibitions/index.vue ]; then
+            # Add style to make the list block stretch
+            if ! grep -q ".exh-block" pages/admin/exhibitions/index.vue; then
+              sed -i 's/<v-card variant="flat">/<v-card variant="flat" class="exh-block">/' pages/admin/exhibitions/index.vue
+              printf "\n<style scoped>\n.exh-block{ width:100%; max-width:none; }\n</style>\n" >> pages/admin/exhibitions/index.vue
+            fi
+          fi
+
+      - name: Commit & push
+        run: |
+          git config user.name "gallery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin HEAD:${{ github.event.inputs.branch }}
