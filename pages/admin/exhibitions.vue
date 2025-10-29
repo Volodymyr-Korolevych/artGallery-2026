@@ -10,7 +10,6 @@ const edited = ref<any>({})
 
 const canEdit = ref(false)
 onMounted(async () => {
-  // admin gate
   if (!user.value) return navigateTo('/login')
   const { data } = await supabase.from('profiles').select('role').eq('id', user.value.id).maybeSingle()
   if (data?.role !== 'admin') return navigateTo('/')
@@ -21,23 +20,32 @@ onMounted(async () => {
 const fetchAll = async () => {
   const { data } = await supabase.from('exhibitions').select('*').order('createdAt', { ascending: false })
   items.value = data || []
-  const { data: a } = await supabase.from('artists').select('id, fullName')
+  const { data: a } = await supabase.from('artists').select('id, "fullName"')
   artists.value = a || []
 }
 
-const newItem = () => { edited.value = { title:'', painterId:null, isPublished:true, coverUrl:'', cardUrl:'', startDate:null, endDate:null }; dialog.value = true }
+const toISODate = (s: string | null) => s ? new Date(s).toISOString() : null
+
+const newItem = () => {
+  edited.value = { title:'', painterId:null, isPublished:true, coverUrl:'', cardUrl:'', startDate:null, endDate:null }
+  dialog.value = true
+}
 const editItem = (it:any) => { edited.value = { ...it }; dialog.value = true }
 
 const save = async () => {
   const payload = { ...edited.value }
+  // ensure ISO for timestamptz
+  payload.startDate = toISODate(payload.startDate)
+  payload.endDate   = toISODate(payload.endDate)
+
   if (!payload.id) {
     const { data, error } = await supabase.from('exhibitions').insert(payload).select('*').single()
-    if (!error) { items.value.unshift(data!) }
+    if (!error && data) { items.value.unshift(data) }
   } else {
     const { data, error } = await supabase.from('exhibitions').update(payload).eq('id', payload.id).select('*').single()
-    if (!error) {
+    if (!error && data) {
       const idx = items.value.findIndex(i => i.id === payload.id)
-      if (idx>-1) items.value[idx] = data!
+      if (idx>-1) items.value[idx] = data
     }
   }
   dialog.value = false
@@ -46,16 +54,22 @@ const save = async () => {
 const del = async (it:any) => {
   await supabase.from('exhibitions').delete().eq('id', it.id)
   items.value = items.value.filter(x => x.id !== it.id)
-  // (optional) you may also call a RPC to cleanup folder exhibitions/{id} in storage (admin-only)
+  // TODO: admin-only RPC to clean up storage folder exhibitions/{id}
 }
 
 const pickCover = async (e:Event) => {
-  const f = (e.target as HTMLInputElement).files?.[0]; if (!f || !edited.value.id) return
-  edited.value.coverUrl = await uploadCoverForExhibition(edited.value.id, f)
+  const f = (e.target as HTMLInputElement).files?.[0]
+  if (!f || !edited.value.id) return
+  const url = await uploadCoverForExhibition(edited.value.id, f)
+  edited.value.coverUrl = url
+  await supabase.from('exhibitions').update({ coverUrl: url }).eq('id', edited.value.id)
 }
 const pickCard = async (e:Event) => {
-  const f = (e.target as HTMLInputElement).files?.[0]; if (!f || !edited.value.id) return
-  edited.value.cardUrl = await uploadCardForExhibition(edited.value.id, f)
+  const f = (e.target as HTMLInputElement).files?.[0]
+  if (!f || !edited.value.id) return
+  const url = await uploadCardForExhibition(edited.value.id, f)
+  edited.value.cardUrl = url
+  await supabase.from('exhibitions').update({ cardUrl: url }).eq('id', edited.value.id)
 }
 </script>
 

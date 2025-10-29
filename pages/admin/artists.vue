@@ -28,20 +28,23 @@ const save = async () => {
   const payload = { ...edited.value }
   if (!payload.id) {
     const { data, error } = await supabase.from('artists').insert(payload).select('*').single()
-    if (!error) items.value.unshift(data!)
+    if (!error && data) items.value.unshift(data)
   } else {
     const { data, error } = await supabase.from('artists').update(payload).eq('id', payload.id).select('*').single()
-    if (!error) {
+    if (!error && data) {
       const idx = items.value.findIndex(i => i.id === payload.id)
-      if (idx>-1) items.value[idx] = data!
+      if (idx>-1) items.value[idx] = data
     }
   }
   dialog.value = false
 }
 
 const pickPortrait = async (e:Event) => {
-  const f = (e.target as HTMLInputElement).files?.[0]; if (!f || !edited.value.id) return
-  edited.value.portraitUrl = await uploadArtistPortrait(edited.value.id, f)
+  const f = (e.target as HTMLInputElement).files?.[0]
+  if (!f || !edited.value.id) return
+  const url = await uploadArtistPortrait(edited.value.id, f)
+  edited.value.portraitUrl = url
+  await supabase.from('artists').update({ portraitUrl: url }).eq('id', edited.value.id)
 }
 </script>
 

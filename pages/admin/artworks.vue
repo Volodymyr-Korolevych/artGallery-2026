@@ -21,7 +21,7 @@ onMounted(async () => {
 const fetchAll = async () => {
   const { data } = await supabase.from('artworks').select('*').order('id', { ascending: false })
   arts.value = data || []
-  const { data: a } = await supabase.from('artists').select('id, fullName')
+  const { data: a } = await supabase.from('artists').select('id, "fullName"')
   artists.value = a || []
   const { data: e } = await supabase.from('exhibitions').select('id, title')
   exhibitions.value = e || []
@@ -34,20 +34,23 @@ const save = async () => {
   const payload = { ...edited.value }
   if (!payload.id) {
     const { data, error } = await supabase.from('artworks').insert(payload).select('*').single()
-    if (!error) arts.value.unshift(data!)
+    if (!error && data) arts.value.unshift(data)
   } else {
     const { data, error } = await supabase.from('artworks').update(payload).eq('id', payload.id).select('*').single()
-    if (!error) {
+    if (!error && data) {
       const idx = arts.value.findIndex(i => i.id === payload.id)
-      if (idx>-1) arts.value[idx] = data!
+      if (idx>-1) arts.value[idx] = data
     }
   }
   dialog.value = false
 }
 
 const pickImage = async (e:Event) => {
-  const f = (e.target as HTMLInputElement).files?.[0]; if (!f || !edited.value.id) return
-  edited.value.imageUrl = await uploadArtworkImage(edited.value.id, f)
+  const f = (e.target as HTMLInputElement).files?.[0]
+  if (!f || !edited.value.id) return
+  const url = await uploadArtworkImage(edited.value.id, f)
+  edited.value.imageUrl = url
+  await supabase.from('artworks').update({ imageUrl: url }).eq('id', edited.value.id)
 }
 </script>
 
