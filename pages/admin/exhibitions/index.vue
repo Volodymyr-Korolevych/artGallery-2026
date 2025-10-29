@@ -30,8 +30,7 @@ const fetchAll = async () => {
 onMounted(fetchAll)
 
 const thumb = (url?: string | null) => {
-  if (!url) return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width=80 height=50><rect width=100% height=100% fill="%23ddd"/></svg>'
-  // cache-busting для гарантованого оновлення
+  if (!url) return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="50"><rect width="100%" height="100%" fill="%23ddd"/></svg>'
   const sep = url.includes('?') ? '&' : '?'
   return url + sep + 'v=' + Date.now()
 }
@@ -46,7 +45,7 @@ const addNew   = () => navigateTo('/admin/exhibitions/new')
     <v-btn color="primary" @click="addNew">Додати виставку</v-btn>
   </div>
 
-  <v-card variant="flat">
+  <v-card variant="flat" class="exh-block">
     <v-list lines="two" density="comfortable">
       <v-list-item
         v-for="e in items"
@@ -83,7 +82,6 @@ const addNew   = () => navigateTo('/admin/exhibitions/new')
   justify-content: space-between;
   margin-bottom: 16px;
 }
-.exh-row {
-  cursor: pointer;
-}
+.exh-row { cursor: pointer; }
+.exh-block { width: 100%; max-width: none; }
 </style>

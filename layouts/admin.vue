@@ -39,17 +39,20 @@ const nav = [
 <style>
 .admin-wrap {
   display: grid;
-  grid-template-columns: 280px 1fr;
-  min-height: calc(100vh - 72px); /* 72px — відступ під AppHeader у main layout */
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: calc(100vh - 72px);
 }
 .admin-drawer {
   border-right: 1px solid rgba(0,0,0,0.08);
 }
 .admin-content {
   padding: 24px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
   overflow: auto;
 }
 @media (max-width: 960px) {
-  .admin-wrap { grid-template-columns: 220px 1fr; }
+  .admin-wrap { grid-template-columns: 220px minmax(0, 1fr); }
 }
 </style>
