@@ -1,8 +1,15 @@
 <template>
-  <v-app>
+  <div class="layout-wrap">
     <AppHeader />
-    <v-main class="pt-16">
+    <main class="app-main">
       <slot />
-    </v-main>
-  </v-app>
+    </main>
+    <AppFooter />
+  </div>
 </template>
+
+<style>
+.layout-wrap { display: flex; flex-direction: column; min-height: 100vh; }
+.app-main { padding-top: 72px; flex: 1 0 auto; }
+@media (max-width: 600px) { .app-main { padding-top: 80px; } }
+</style>

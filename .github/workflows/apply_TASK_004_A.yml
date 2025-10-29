@@ -1,0 +1,260 @@
+name: Apply TASK-004-A (Admin layout with left menu + Exhibitions list via v-list)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to commit to'
+        required: true
+        default: 'main'
+      commit_message:
+        description: 'Commit message'
+        required: true
+        default: 'TASK-004-A: admin layout (left drawer), routes, and exhibitions list (v-list with card thumbnails)'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Add/Update admin layout and pages
+        run: |
+          mkdir -p layouts components pages/admin pages/admin/exhibitions pages/admin/artists pages/admin/tickets pages/admin/reviews middleware composables
+
+          # ---- Admin-only route guard (scoped to /admin) ----
+          cat > middleware/admin-only.ts << 'TS'
+          export default defineNuxtRouteMiddleware(async (to) => {
+            if (!to.path.startsWith('/admin')) return
+            const user = useSupabaseUser()
+            const supabase = useSupabaseClient()
+            if (!user.value) return navigateTo('/login')
+            const { data, error } = await supabase.from('profiles').select('role').eq('id', user.value.id).maybeSingle()
+            if (error || data?.role !== 'admin') return navigateTo('/')
+          })
+          TS
+
+          # ---- Admin layout: left permanent drawer + content on the right ----
+          cat > layouts/admin.vue << 'VUE'
+          <script setup lang="ts">
+          const drawer = ref(true)
+          const nav = [
+            { label: 'Експозиції', to: '/admin/exhibitions', icon: 'mdi-image-multiple' },
+            { label: 'Художники',  to: '/admin/artists',     icon: 'mdi-account' },
+            { label: 'Квитки',     to: '/admin/tickets',     icon: 'mdi-ticket-confirmation' },
+            { label: 'Відгуки',    to: '/admin/reviews',     icon: 'mdi-message-text' },
+          ]
+          </script>
+
+          <template>
+            <div class="admin-wrap">
+              <v-navigation-drawer
+                v-model="drawer"
+                permanent
+                color="surface"
+                class="admin-drawer"
+              >
+                <div class="px-4 py-4 text-subtitle-1 font-weight-medium">Адмін-панель</div>
+                <v-divider />
+                <v-list nav density="comfortable">
+                  <v-list-item
+                    v-for="item in nav"
+                    :key="item.to"
+                    :to="item.to"
+                    :prepend-icon="item.icon"
+                    :title="item.label"
+                    rounded
+                  />
+                </v-list>
+              </v-navigation-drawer>
+
+              <div class="admin-content">
+                <slot />
+              </div>
+            </div>
+          </template>
+
+          <style>
+          .admin-wrap {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-height: calc(100vh - 72px); /* 72px — відступ під AppHeader у main layout */
+          }
+          .admin-drawer {
+            border-right: 1px solid rgba(0,0,0,0.08);
+          }
+          .admin-content {
+            padding: 24px;
+            overflow: auto;
+          }
+          @media (max-width: 960px) {
+            .admin-wrap { grid-template-columns: 220px 1fr; }
+          }
+          </style>
+          VUE
+
+          # ---- Redirect /admin -> /admin/exhibitions ----
+          cat > pages/admin/index.vue << 'VUE'
+          <script setup lang="ts">
+          definePageMeta({ layout: 'admin', middleware: 'admin-only' })
+          onMounted(() => navigateTo('/admin/exhibitions'))
+          </script>
+          <template></template>
+          VUE
+
+          # ---- Exhibitions list page (v-list, click row to open editor) ----
+          cat > pages/admin/exhibitions/index.vue << 'VUE'
+          <script setup lang="ts">
+          definePageMeta({ layout: 'admin', middleware: 'admin-only' })
+          const supabase = useSupabaseClient()
+
+          type Exhibition = {
+            id: number
+            title: string
+            painterId: number | null
+            coverUrl?: string | null
+            cardUrl?: string | null
+            startDate?: string | null
+            endDate?: string | null
+            isPublished?: boolean
+          }
+
+          const items = ref<Exhibition[]>([])
+          const artistsById = ref<Record<number, string>>({})
+
+          const fmtUA = (v: string | null | undefined) => v ? new Date(v).toLocaleDateString('uk-UA') : '—'
+
+          const fetchAll = async () => {
+            const { data: exhs } = await supabase.from('exhibitions').select('*').order('createdAt', { ascending: false })
+            items.value = exhs || []
+
+            const { data: artists } = await supabase.from('artists').select('id, "fullName"')
+            artistsById.value = {}
+            for (const a of (artists || [])) artistsById.value[a.id] = a.fullName
+          }
+
+          onMounted(fetchAll)
+
+          const thumb = (url?: string | null) => {
+            if (!url) return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width=80 height=50><rect width=100% height=100% fill="%23ddd"/></svg>'
+            // cache-busting для гарантованого оновлення
+            const sep = url.includes('?') ? '&' : '?'
+            return url + sep + 'v=' + Date.now()
+          }
+
+          const openEdit = (id: number) => navigateTo('/admin/exhibitions/' + id)
+          const addNew   = () => navigateTo('/admin/exhibitions/new')
+          </script>
+
+          <template>
+            <div class="exh-head">
+              <h1 class="text-h5">Експозиції</h1>
+              <v-btn color="primary" @click="addNew">Додати виставку</v-btn>
+            </div>
+
+            <v-card variant="flat">
+              <v-list lines="two" density="comfortable">
+                <v-list-item
+                  v-for="e in items"
+                  :key="e.id"
+                  @click="openEdit(e.id)"
+                  class="exh-row"
+                >
+                  <template #prepend>
+                    <v-img :src="thumb(e.cardUrl)" width="80" height="50" cover class="rounded-lg mr-3" />
+                  </template>
+
+                  <div class="d-flex flex-column">
+                    <div class="text-subtitle-1">{{ e.title || 'Без назви' }}</div>
+                    <div class="text-caption text-medium-emphasis">
+                      {{ artistsById[e.painterId || -1] || '—' }} ·
+                      {{ fmtUA(e.startDate) }} — {{ fmtUA(e.endDate) }}
+                      <span v-if="e.isPublished" class="ml-2">· Опубліковано</span>
+                    </div>
+                  </div>
+
+                  <template #append>
+                    <v-icon v-if="e.isPublished" icon="mdi-check-circle" class="text-success" />
+                    <v-icon v-else icon="mdi-circle-medium" class="text-disabled" />
+                  </template>
+                </v-list-item>
+              </v-list>
+            </v-card>
+          </template>
+
+          <style scoped>
+          .exh-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+          }
+          .exh-row {
+            cursor: pointer;
+          }
+          </style>
+          VUE
+
+          # ---- Placeholders for other admin sections (so links work; implement later) ----
+          cat > pages/admin/artists/index.vue << 'VUE'
+          <script setup lang="ts">
+          definePageMeta({ layout: 'admin', middleware: 'admin-only' })
+          </script>
+          <template>
+            <div class="py-6">
+              <h1 class="text-h5 mb-2">Художники</h1>
+              <div class="text-body-2 text-medium-emphasis">Розділ у розробці (TASK-004-B).</div>
+            </div>
+          </template>
+          VUE
+
+          cat > pages/admin/tickets/index.vue << 'VUE'
+          <script setup lang="ts">
+          definePageMeta({ layout: 'admin', middleware: 'admin-only' })
+          </script>
+          <template>
+            <div class="py-6">
+              <h1 class="text-h5 mb-2">Квитки</h1>
+              <div class="text-body-2 text-medium-emphasis">Розділ у розробці (TASK-004-B).</div>
+            </div>
+          </template>
+          VUE
+
+          cat > pages/admin/reviews/index.vue << 'VUE'
+          <script setup lang="ts">
+          definePageMeta({ layout: 'admin', middleware: 'admin-only' })
+          </script>
+          <template>
+            <div class="py-6">
+              <h1 class="text-h5 mb-2">Відгуки</h1>
+              <div class="text-body-2 text-medium-emphasis">Розділ у розробці (TASK-004-B).</div>
+            </div>
+          </template>
+          VUE
+
+      - name: Commit & push
+        run: |
+          git config user.name "gallery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add \
+            layouts/admin.vue \
+            middleware/admin-only.ts \
+            pages/admin/index.vue \
+            pages/admin/exhibitions/index.vue \
+            pages/admin/artists/index.vue \
+            pages/admin/tickets/index.vue \
+            pages/admin/reviews/index.vue
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin HEAD:${{ github.event.inputs.branch }}

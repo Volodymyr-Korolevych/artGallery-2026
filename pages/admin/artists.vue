@@ -28,20 +28,23 @@ const save = async () => {
   const payload = { ...edited.value }
   if (!payload.id) {
     const { data, error } = await supabase.from('artists').insert(payload).select('*').single()
-    if (!error) items.value.unshift(data!)
+    if (!error && data) items.value.unshift(data)
   } else {
     const { data, error } = await supabase.from('artists').update(payload).eq('id', payload.id).select('*').single()
-    if (!error) {
+    if (!error && data) {
       const idx = items.value.findIndex(i => i.id === payload.id)
-      if (idx>-1) items.value[idx] = data!
+      if (idx>-1) items.value[idx] = data
     }
   }
   dialog.value = false
 }
 
-const pickPortrait = async (e:Event) => {
-  const f = (e.target as HTMLInputElement).files?.[0]; if (!f || !edited.value.id) return
-  edited.value.portraitUrl = await uploadArtistPortrait(edited.value.id, f)
+const onPortraitPicked = async (files: File[]) => {
+  const f = files?.[0]
+  if (!f || !edited.value.id) return
+  const url = await uploadArtistPortrait(edited.value.id, f)
+  edited.value.portraitUrl = url
+  await supabase.from('artists').update({ portraitUrl: url }).eq('id', edited.value.id)
 }
 </script>
 
@@ -75,7 +78,14 @@ const pickPortrait = async (e:Event) => {
 
         <div>
           <div class="text-subtitle-2 mb-1">Портрет</div>
-          <input type="file" accept="image/*" @change="pickPortrait" :disabled="!edited.id" />
+          <v-file-input
+            accept="image/*"
+            label="Оберіть файл"
+            placeholder="Файл не вибрано"
+            prepend-icon="mdi-image"
+            show-size
+            @update:model-value="onPortraitPicked"
+          />
           <div class="mt-2" v-if="edited.portraitUrl"><img :src="edited.portraitUrl" style="max-width:100%" /></div>
         </div>
 

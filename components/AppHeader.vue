@@ -6,13 +6,16 @@ const menu = ref(false)
 
 const fetchProfile = async () => {
   if (!user.value) { profile.value = null; return }
-  const { data } = await supabase.from('profiles').select('username, role').eq('id', user.value.id).maybeSingle()
-  profile.value = data
+  const { data, error } = await supabase.from('profiles').select('username, role').eq('id', user.value.id).maybeSingle()
+  if (!error) profile.value = data
 }
-watchEffect(fetchProfile)
+
+onMounted(fetchProfile)
+watch(user, () => fetchProfile())
 
 const logout = async () => {
   await supabase.auth.signOut()
+  profile.value = null
   navigateTo('/')
 }
 </script>

@@ -1,5 +1,5 @@
 <template>
-  <v-footer app class="pa-6">
-    <div class="text-caption">© {{ new Date().getFullYear() }} Галерея. Контакти: info@example.com</div>
+  <v-footer app border class="justify-center py-4">
+    <span class="text-caption">&copy; {{ new Date().getFullYear() }} Art Gallery</span>
   </v-footer>
 </template>
