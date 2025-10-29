@@ -45,8 +45,8 @@ const save = async () => {
   dialog.value = false
 }
 
-const pickImage = async (e:Event) => {
-  const f = (e.target as HTMLInputElement).files?.[0]
+const onImagePicked = async (files: File[]) => {
+  const f = files?.[0]
   if (!f || !edited.value.id) return
   const url = await uploadArtworkImage(edited.value.id, f)
   edited.value.imageUrl = url
@@ -88,7 +88,14 @@ const pickImage = async (e:Event) => {
 
         <div>
           <div class="text-subtitle-2 mb-1">Зображення роботи</div>
-          <input type="file" accept="image/*" @change="pickImage" :disabled="!edited.id" />
+          <v-file-input
+            accept="image/*"
+            label="Оберіть файл"
+            placeholder="Файл не вибрано"
+            prepend-icon="mdi-image"
+            show-size
+            @update:model-value="onImagePicked"
+          />
           <div class="mt-2" v-if="edited.imageUrl"><img :src="edited.imageUrl" style="max-width:100%" /></div>
         </div>
 

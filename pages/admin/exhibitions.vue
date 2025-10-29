@@ -24,6 +24,7 @@ const fetchAll = async () => {
   artists.value = a || []
 }
 
+const fmtUA = (v: string | null) => v ? new Date(v).toLocaleDateString('uk-UA') : '—'
 const toISODate = (s: string | null) => s ? new Date(s).toISOString() : null
 
 const newItem = () => {
@@ -34,13 +35,12 @@ const editItem = (it:any) => { edited.value = { ...it }; dialog.value = true }
 
 const save = async () => {
   const payload = { ...edited.value }
-  // ensure ISO for timestamptz
   payload.startDate = toISODate(payload.startDate)
   payload.endDate   = toISODate(payload.endDate)
 
   if (!payload.id) {
     const { data, error } = await supabase.from('exhibitions').insert(payload).select('*').single()
-    if (!error && data) { items.value.unshift(data) }
+    if (!error && data) items.value.unshift(data)
   } else {
     const { data, error } = await supabase.from('exhibitions').update(payload).eq('id', payload.id).select('*').single()
     if (!error && data) {
@@ -51,21 +51,15 @@ const save = async () => {
   dialog.value = false
 }
 
-const del = async (it:any) => {
-  await supabase.from('exhibitions').delete().eq('id', it.id)
-  items.value = items.value.filter(x => x.id !== it.id)
-  // TODO: admin-only RPC to clean up storage folder exhibitions/{id}
-}
-
-const pickCover = async (e:Event) => {
-  const f = (e.target as HTMLInputElement).files?.[0]
+const onCoverPicked = async (files: File[]) => {
+  const f = files?.[0]
   if (!f || !edited.value.id) return
   const url = await uploadCoverForExhibition(edited.value.id, f)
   edited.value.coverUrl = url
   await supabase.from('exhibitions').update({ coverUrl: url }).eq('id', edited.value.id)
 }
-const pickCard = async (e:Event) => {
-  const f = (e.target as HTMLInputElement).files?.[0]
+const onCardPicked = async (files: File[]) => {
+  const f = files?.[0]
   if (!f || !edited.value.id) return
   const url = await uploadCardForExhibition(edited.value.id, f)
   edited.value.cardUrl = url
@@ -93,17 +87,17 @@ const pickCard = async (e:Event) => {
         <span>{{ (artists.find(a=>a.id===item.painterId)?.fullName) || '—' }}</span>
       </template>
       <template #item.startDate="{ item }">
-        <span>{{ item.startDate ? new Date(item.startDate).toLocaleDateString() : '—' }}</span>
+        <span>{{ fmtUA(item.startDate) }}</span>
       </template>
       <template #item.endDate="{ item }">
-        <span>{{ item.endDate ? new Date(item.endDate).toLocaleDateString() : '—' }}</span>
+        <span>{{ fmtUA(item.endDate) }}</span>
       </template>
       <template #item.isPublished="{ item }">
         <v-chip :color="item.isPublished ? 'green' : 'grey'">{{ item.isPublished ? 'Так' : 'Ні' }}</v-chip>
       </template>
       <template #item.actions="{ item }">
         <v-btn size="small" variant="text" v-if="canEdit" @click="editItem(item)">Редагувати</v-btn>
-        <v-btn size="small" variant="text" v-if="canEdit" color="error" @click="del(item)">Видалити</v-btn>
+        <v-btn size="small" variant="text" v-if="canEdit" color="error" @click="() => {}" disabled>Видалити</v-btn>
       </template>
     </v-data-table>
 
@@ -119,19 +113,33 @@ const pickCard = async (e:Event) => {
           item-value="id"
           label="Художник"
         />
-        <v-text-field v-model="edited.startDate" type="date" label="Дата початку" />
-        <v-text-field v-model="edited.endDate" type="date" label="Дата завершення" />
+        <v-text-field v-model="edited.startDate" type="date" label="Дата початку (дд.мм.рррр)" />
+        <v-text-field v-model="edited.endDate" type="date" label="Дата завершення (дд.мм.рррр)" />
         <v-switch v-model="edited.isPublished" label="Опубліковано" />
 
         <div class="d-flex gap-4">
           <div class="flex-1">
             <div class="text-subtitle-2 mb-1">Cover (широкий банер)</div>
-            <input type="file" accept="image/*" @change="pickCover" :disabled="!edited.id" />
+            <v-file-input
+              accept="image/*"
+              label="Оберіть файл"
+              placeholder="Файл не вибрано"
+              prepend-icon="mdi-image"
+              show-size
+              @update:model-value="onCoverPicked"
+            />
             <div class="mt-2" v-if="edited.coverUrl"><img :src="edited.coverUrl" style="max-width:100%" /></div>
           </div>
           <div class="flex-1">
             <div class="text-subtitle-2 mb-1">Card (картка у стрічці)</div>
-            <input type="file" accept="image/*" @change="pickCard" :disabled="!edited.id" />
+            <v-file-input
+              accept="image/*"
+              label="Оберіть файл"
+              placeholder="Файл не вибрано"
+              prepend-icon="mdi-image"
+              show-size
+              @update:model-value="onCardPicked"
+            />
             <div class="mt-2" v-if="edited.cardUrl"><img :src="edited.cardUrl" style="max-width:100%" /></div>
           </div>
         </div>
