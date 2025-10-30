@@ -10,7 +10,7 @@ on:
       commit_message:
         description: Commit message
         required: true
-        default: TASK-004-B-FIX: remove uploads/isPublished on /new, fix Save, localize dates via v-date-input (uk)
+        default: TASK-004-B-FIX:remove uploads/isPublished on /new, fix Save, localize dates via v-date-input (uk)
 
 permissions:
   contents: write
