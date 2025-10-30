@@ -12,35 +12,27 @@ const form = ref<any>(null)
 const loading = ref(true)
 const saving  = ref(false)
 const editMode = ref(true)
+const errorMsg = ref<string | null>(null)
 
 const fetchArtists = async () => {
   const { data } = await supabase.from('artists').select('id,"fullName"').order('fullName')
   artists.value = data || []
 }
-const fromISOtoDateInput = (s: string | null) => {
-  if (!s) return null
-  const d = new Date(s)
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth()+1).padStart(2,'0')
-  const dd = String(d.getDate()).padStart(2,'0')
-  return `${yyyy}-${mm}-${dd}`
-}
-const toISO = (s: string | null) => s ? new Date(s).toISOString() : null
+
+const fromISOtoDateObj = (s: string | null) => s ? new Date(s) : null
+const toISO = (d: Date | null) => d ? new Date(d).toISOString() : null
 
 const fetchOne = async () => {
   loading.value = true
   const { data } = await supabase.from('exhibitions').select('*').eq('id', id).maybeSingle()
-  form.value = data || null
-  if (form.value) {
-    form.value.startDate = fromISOtoDateInput(form.value.startDate)
-    form.value.endDate   = fromISOtoDateInput(form.value.endDate)
-    if (form.value.isPublished) {
-      title.value = 'Переглянути виставку'
-      editMode.value = false
-    } else {
-      title.value = 'Редагувати виставку'
-      editMode.value = true
+  if (data) {
+    form.value = {
+      ...data,
+      startDate: fromISOtoDateObj(data.startDate),
+      endDate:   fromISOtoDateObj(data.endDate)
     }
+    if (data.isPublished) { title.value = 'Переглянути виставку'; editMode.value = false }
+    else { title.value = 'Редагувати виставку'; editMode.value = true }
   }
   loading.value = false
 }
@@ -49,26 +41,30 @@ onMounted(async () => {
   await Promise.all([fetchArtists(), fetchOne()])
 })
 
-const enableEdit = () => {
-  editMode.value = true
-  title.value = 'Редагувати виставку'
-}
+const enableEdit = () => { editMode.value = true; title.value = 'Редагувати виставку' }
 
 const save = async () => {
   if (!form.value) return
+  errorMsg.value = null
   saving.value = true
-  const payload = { ...form.value }
-  payload.startDate = toISO(payload.startDate)
-  payload.endDate   = toISO(payload.endDate)
-  const { data, error } = await supabase.from('exhibitions').update(payload).eq('id', id).select('*').single()
-  saving.value = false
-  if (!error && data) {
-    form.value = {
-      ...data,
-      startDate: fromISOtoDateInput(data.startDate),
-      endDate: fromISOtoDateInput(data.endDate)
+  try {
+    const payload = { ...form.value }
+    payload.startDate = toISO(payload.startDate)
+    payload.endDate   = toISO(payload.endDate)
+    const { data, error } = await supabase.from('exhibitions').update(payload).eq('id', id).select('*').single()
+    if (error) throw error
+    if (data) {
+      form.value = {
+        ...data,
+        startDate: fromISOtoDateObj(data.startDate),
+        endDate:   fromISOtoDateObj(data.endDate)
+      }
+      if (data.isPublished) { title.value = 'Переглянути виставку'; editMode.value = false }
     }
-    if (data.isPublished) { title.value = 'Переглянути виставку'; editMode.value = false }
+  } catch (e:any) {
+    errorMsg.value = e?.message || 'Помилка збереження'
+  } finally {
+    saving.value = false
   }
 }
 
@@ -79,6 +75,7 @@ const del = async () => {
   navigateTo('/admin/exhibitions')
 }
 
+// file inputs (приховані)
 const coverInput = ref<HTMLInputElement|null>(null)
 const cardInput  = ref<HTMLInputElement|null>(null)
 const pickCover = () => coverInput.value?.click()
@@ -112,6 +109,8 @@ const onCardChange = async (e: Event) => {
     </div>
 
     <v-card class="pa-4">
+      <v-alert v-if="errorMsg" type="error" class="mb-4" density="compact">{{ errorMsg }}</v-alert>
+
       <v-text-field v-model="form.title" :readonly="!editMode" label="Назва" />
       <v-select
         v-model="form.painterId"
@@ -123,12 +122,12 @@ const onCardChange = async (e: Event) => {
       />
       <v-textarea v-model="form.description" :readonly="!editMode" label="Опис виставки" auto-grow />
 
-      <div class="grid-2">
-        <v-text-field v-model="form.startDate" type="date" label="Дата початку" :readonly="!editMode" />
-        <v-text-field v-model="form.endDate" type="date" label="Дата завершення" :readonly="!editMode" />
-      </div>
-
-      <v-switch v-model="form.isPublished" :disabled="!editMode" label="Опубліковано" />
+      <VLocaleProvider locale="uk">
+        <div class="grid-2">
+          <v-date-input v-model="form.startDate" label="Дата початку" :readonly="!editMode" prepend-icon="mdi-calendar" />
+          <v-date-input v-model="form.endDate" label="Дата завершення" :readonly="!editMode" prepend-icon="mdi-calendar" />
+        </div>
+      </VLocaleProvider>
 
       <div class="images">
         <div>
