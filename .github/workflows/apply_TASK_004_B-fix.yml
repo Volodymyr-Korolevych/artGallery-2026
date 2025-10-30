@@ -1,0 +1,359 @@
+name: Apply TASK-004-B (exhibition full pages)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to commit to
+        required: true
+        default: main
+      commit_message:
+        description: Commit message
+        required: true
+        default: TASK-004-B: full-page exhibition editor/viewer, description, UA dates, 100px images, clean upload UI, artworks row (6)
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Apply patch files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pages/admin/exhibitions composables
+
+          cat > composables/useExhibitionStorage.ts <<'TS'
+          export function useExhibitionStorage() {
+            const supabase = useSupabaseClient()
+            const BUCKET = 'images'
+            const removeExhibitionFiles = async (exhId: number | string) => {
+              await supabase.storage.from(BUCKET).remove([
+                `exhibitions/${exhId}/cover.jpg`,
+                `exhibitions/${exhId}/card.jpg`,
+              ])
+            }
+            return { removeExhibitionFiles }
+          }
+          TS
+
+          cat > pages/admin/exhibitions/new.vue <<'VUE'
+          <script setup lang="ts">
+          definePageMeta({ layout: 'admin', middleware: 'admin-only' })
+          const supabase = useSupabaseClient()
+          const { uploadCoverForExhibition, uploadCardForExhibition } = useStorageUpload()
+
+          const title = ref('Додати виставку')
+          const artists = ref<any[]>([])
+          const form = ref<any>({
+            title: '',
+            painterId: null,
+            description: '',
+            startDate: null,
+            endDate: null,
+            isPublished: false,
+            coverUrl: '',
+            cardUrl: ''
+          })
+          const loading = ref(false)
+
+          const fetchArtists = async () => {
+            const { data } = await supabase.from('artists').select('id,"fullName"').order('fullName')
+            artists.value = data || []
+          }
+          onMounted(fetchArtists)
+
+          const toISO = (s: string | null) => s ? new Date(s).toISOString() : null
+
+          const save = async () => {
+            loading.value = true
+            const payload = { ...form.value }
+            payload.startDate = toISO(payload.startDate)
+            payload.endDate   = toISO(payload.endDate)
+            const { data, error } = await supabase.from('exhibitions').insert(payload).select('*').single()
+            loading.value = false
+            if (!error && data) navigateTo('/admin/exhibitions/' + data.id)
+          }
+
+          const coverInput = ref<HTMLInputElement|null>(null)
+          const cardInput  = ref<HTMLInputElement|null>(null)
+          const pickCover = () => coverInput.value?.click()
+          const pickCard  = () => cardInput.value?.click()
+
+          const onCoverChange = (e: Event) => {
+            const f = (e.target as HTMLInputElement).files?.[0]
+            if (!f) return
+            form.value.coverUrl = URL.createObjectURL(f)
+          }
+          const onCardChange = (e: Event) => {
+            const f = (e.target as HTMLInputElement).files?.[0]
+            if (!f) return
+            form.value.cardUrl = URL.createObjectURL(f)
+          }
+          </script>
+
+          <template>
+            <div class="page">
+              <div class="head">
+                <h1 class="text-h5">{{ title }}</h1>
+                <div class="actions">
+                  <v-btn color="primary" :loading="loading" @click="save">Зберегти</v-btn>
+                </div>
+              </div>
+
+              <v-card class="pa-4">
+                <v-text-field v-model="form.title" label="Назва" />
+                <v-select
+                  v-model="form.painterId"
+                  :items="artists"
+                  item-title="fullName"
+                  item-value="id"
+                  label="Художник"
+                />
+                <v-textarea v-model="form.description" label="Опис виставки" auto-grow />
+
+                <div class="grid-2">
+                  <v-text-field v-model="form.startDate" type="date" label="Дата початку" />
+                  <v-text-field v-model="form.endDate" type="date" label="Дата завершення" />
+                </div>
+
+                <v-switch v-model="form.isPublished" label="Опубліковано" />
+
+                <div class="images">
+                  <div>
+                    <div class="lbl">Cover (100px)</div>
+                    <v-btn variant="tonal" @click="pickCover">Оберіть файл</v-btn>
+                    <input ref="coverInput" type="file" accept="image/*" class="hidden" @change="onCoverChange" />
+                    <v-img v-if="form.coverUrl" :src="form.coverUrl" height="100" cover class="mt-2 rounded-lg" />
+                  </div>
+                  <div>
+                    <div class="lbl">Card (100px)</div>
+                    <v-btn variant="tonal" @click="pickCard">Оберіть файл</v-btn>
+                    <input ref="cardInput" type="file" accept="image/*" class="hidden" @change="onCardChange" />
+                    <v-img v-if="form.cardUrl" :src="form.cardUrl" height="100" cover class="mt-2 rounded-lg" />
+                  </div>
+                </div>
+
+                <div class="artworks">
+                  <div class="subhead">Роботи (макс. 6)</div>
+                  <div class="slots">
+                    <div v-for="i in 6" :key="i" class="slot">—</div>
+                  </div>
+                </div>
+              </v-card>
+            </div>
+          </template>
+
+          <style scoped>
+          .page { display: grid; gap: 16px; }
+          .head { display:flex; align-items:center; justify-content:space-between; }
+          .actions { display:flex; gap:8px; }
+          .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+          .images { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:8px; }
+          .lbl { font-size: 12px; opacity:.8; margin-bottom:4px; }
+          .hidden { display:none; }
+          .artworks { margin-top: 16px; }
+          .subhead { font-weight:600; margin-bottom: 8px; }
+          .slots { display:grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+          .slot { height: 80px; border:1px dashed rgba(0,0,0,.2); border-radius:8px; display:flex; align-items:center; justify-content:center;}
+          @media (max-width: 1200px) { .slots { grid-template-columns: repeat(3, 1fr); } }
+          </style>
+          VUE
+
+          cat > pages/admin/exhibitions/[id].vue <<'VUE'
+          <script setup lang="ts">
+          definePageMeta({ layout: 'admin', middleware: 'admin-only' })
+          const route = useRoute()
+          const supabase = useSupabaseClient()
+          const { uploadCoverForExhibition, uploadCardForExhibition } = useStorageUpload()
+          const { removeExhibitionFiles } = useExhibitionStorage()
+
+          const id = Number(route.params.id)
+          const title = ref('Редагувати виставку')
+          const artists = ref<any[]>([])
+          const form = ref<any>(null)
+          const loading = ref(true)
+          const saving  = ref(false)
+          const editMode = ref(true)
+
+          const fetchArtists = async () => {
+            const { data } = await supabase.from('artists').select('id,"fullName"').order('fullName')
+            artists.value = data || []
+          }
+          const fromISOtoDateInput = (s: string | null) => {
+            if (!s) return null
+            const d = new Date(s)
+            const yyyy = d.getFullYear()
+            const mm = String(d.getMonth()+1).padStart(2,'0')
+            const dd = String(d.getDate()).padStart(2,'0')
+            return `${yyyy}-${mm}-${dd}`
+          }
+          const toISO = (s: string | null) => s ? new Date(s).toISOString() : null
+
+          const fetchOne = async () => {
+            loading.value = true
+            const { data } = await supabase.from('exhibitions').select('*').eq('id', id).maybeSingle()
+            form.value = data || null
+            if (form.value) {
+              form.value.startDate = fromISOtoDateInput(form.value.startDate)
+              form.value.endDate   = fromISOtoDateInput(form.value.endDate)
+              if (form.value.isPublished) {
+                title.value = 'Переглянути виставку'
+                editMode.value = false
+              } else {
+                title.value = 'Редагувати виставку'
+                editMode.value = true
+              }
+            }
+            loading.value = false
+          }
+
+          onMounted(async () => {
+            await Promise.all([fetchArtists(), fetchOne()])
+          })
+
+          const enableEdit = () => {
+            editMode.value = true
+            title.value = 'Редагувати виставку'
+          }
+
+          const save = async () => {
+            if (!form.value) return
+            saving.value = true
+            const payload = { ...form.value }
+            payload.startDate = toISO(payload.startDate)
+            payload.endDate   = toISO(payload.endDate)
+            const { data, error } = await supabase.from('exhibitions').update(payload).eq('id', id).select('*').single()
+            saving.value = false
+            if (!error && data) {
+              form.value = {
+                ...data,
+                startDate: fromISOtoDateInput(data.startDate),
+                endDate: fromISOtoDateInput(data.endDate)
+              }
+              if (data.isPublished) { title.value = 'Переглянути виставку'; editMode.value = false }
+            }
+          }
+
+          const del = async () => {
+            if (!confirm('Видалити виставку? Дію не можна скасувати.')) return
+            await removeExhibitionFiles(id)
+            await supabase.from('exhibitions').delete().eq('id', id)
+            navigateTo('/admin/exhibitions')
+          }
+
+          const coverInput = ref<HTMLInputElement|null>(null)
+          const cardInput  = ref<HTMLInputElement|null>(null)
+          const pickCover = () => coverInput.value?.click()
+          const pickCard  = () => cardInput.value?.click()
+
+          const onCoverChange = async (e: Event) => {
+            const f = (e.target as HTMLInputElement).files?.[0]
+            if (!f || !form.value?.id) return
+            const url = await uploadCoverForExhibition(form.value.id, f)
+            form.value.coverUrl = url
+            await supabase.from('exhibitions').update({ coverUrl: url }).eq('id', form.value.id)
+          }
+          const onCardChange = async (e: Event) => {
+            const f = (e.target as HTMLInputElement).files?.[0]
+            if (!f || !form.value?.id) return
+            const url = await uploadCardForExhibition(form.value.id, f)
+            form.value.cardUrl = url
+            await supabase.from('exhibitions').update({ cardUrl: url }).eq('id', form.value.id)
+          }
+          </script>
+
+          <template>
+            <div class="page" v-if="!loading && form">
+              <div class="head">
+                <h1 class="text-h5">{{ title }}</h1>
+                <div class="actions">
+                  <v-btn v-if="!editMode" variant="tonal" @click="enableEdit">Редагувати</v-btn>
+                  <v-btn v-if="editMode" color="error" variant="tonal" @click="del">Видалити</v-btn>
+                  <v-btn v-if="editMode" color="primary" :loading="saving" @click="save">Зберегти</v-btn>
+                </div>
+              </div>
+
+              <v-card class="pa-4">
+                <v-text-field v-model="form.title" :readonly="!editMode" label="Назва" />
+                <v-select
+                  v-model="form.painterId"
+                  :items="artists"
+                  item-title="fullName"
+                  item-value="id"
+                  label="Художник"
+                  :readonly="!editMode"
+                />
+                <v-textarea v-model="form.description" :readonly="!editMode" label="Опис виставки" auto-grow />
+
+                <div class="grid-2">
+                  <v-text-field v-model="form.startDate" type="date" label="Дата початку" :readonly="!editMode" />
+                  <v-text-field v-model="form.endDate" type="date" label="Дата завершення" :readonly="!editMode" />
+                </div>
+
+                <v-switch v-model="form.isPublished" :disabled="!editMode" label="Опубліковано" />
+
+                <div class="images">
+                  <div>
+                    <div class="lbl">Cover (100px)</div>
+                    <div class="row">
+                      <v-btn v-if="editMode" variant="tonal" @click="pickCover">Оберіть файл</v-btn>
+                    </div>
+                    <input ref="coverInput" type="file" accept="image/*" class="hidden" @change="onCoverChange" />
+                    <v-img v-if="form.coverUrl" :src="form.coverUrl" height="100" cover class="mt-2 rounded-lg" />
+                  </div>
+                  <div>
+                    <div class="lbl">Card (100px)</div>
+                    <div class="row">
+                      <v-btn v-if="editMode" variant="tonal" @click="pickCard">Оберіть файл</v-btn>
+                    </div>
+                    <input ref="cardInput" type="file" accept="image/*" class="hidden" @change="onCardChange" />
+                    <v-img v-if="form.cardUrl" :src="form.cardUrl" height="100" cover class="mt-2 rounded-lg" />
+                  </div>
+                </div>
+
+                <div class="artworks">
+                  <div class="subhead">Роботи (макс. 6)</div>
+                  <div class="slots">
+                    <div v-for="i in 6" :key="i" class="slot">—</div>
+                  </div>
+                </div>
+              </v-card>
+            </div>
+          </template>
+
+          <style scoped>
+          .page { display: grid; gap: 16px; }
+          .head { display:flex; align-items:center; justify-content:space-between; }
+          .actions { display:flex; gap:8px; }
+          .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+          .images { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:8px; }
+          .lbl { font-size: 12px; opacity:.8; margin-bottom:4px; }
+          .hidden { display:none; }
+          .row { display:flex; gap:8px; align-items:center; }
+          .artworks { margin-top: 16px; }
+          .subhead { font-weight:600; margin-bottom: 8px; }
+          .slots { display:grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+          .slot { height: 80px; border:1px dashed rgba(0,0,0,.2); border-radius:8px; display:flex; align-items:center; justify-content:center;}
+          @media (max-width: 1200px) { .slots { grid-template-columns: repeat(3, 1fr); } }
+          </style>
+          VUE
+
+      - name: Commit & push
+        run: |
+          git config user.name "gallery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin HEAD:${{ github.event.inputs.branch }}
