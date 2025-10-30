@@ -10,8 +10,7 @@ on:
       commit_message:
         description: Commit message
         required: true
-        default: TASK-004-B: full-page exhibition editor/viewer, description, UA dates, 100px images, clean upload UI, artworks row (6)
-
+        default: TASK-004-B:full-page exhibition editor/viewer, description, UA dates, 100px images, clean upload UI, artworks row (6)
 permissions:
   contents: write
 
