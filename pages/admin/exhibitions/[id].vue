@@ -4,6 +4,7 @@ const route = useRoute()
 const supabase = useSupabaseClient()
 const { uploadCoverForExhibition, uploadCardForExhibition } = useStorageUpload()
 const { removeExhibitionFiles } = useExhibitionStorage()
+const { uploadArtwork, moveArtwork } = useArtworkUpload()
 
 const id = Number(route.params.id)
 const title = ref('Редагувати виставку')
@@ -16,6 +17,32 @@ const errorMsg = ref<string | null>(null)
 
 const showStart = ref(false)
 const showEnd = ref(false)
+
+// Artworks list
+type Artwork = {
+  id?: number
+  exhibitionId: number
+  artistId: number | null
+  title: string
+  year: number | null
+  description: string | null
+  slot: number
+  imageUrl: string | null
+}
+const artworks = ref<Artwork[]>([])
+const dialog = ref(false)
+const artForm = ref<Artwork>({
+  exhibitionId: id, artistId: null, title: '', year: null, description: '', slot: 1, imageUrl: null
+})
+const fileInput = ref<HTMLInputElement|null>(null)
+const filePending = ref<File|null>(null)
+const editingId = ref<number | null>(null)
+
+const pickArtFile = () => fileInput.value?.click()
+const onArtFile = (e: Event) => {
+  const f = (e.target as HTMLInputElement).files?.[0] || null
+  filePending.value = f
+}
 
 const fetchArtists = async () => {
   const { data } = await supabase.from('artists').select('id,"fullName"').order('fullName')
@@ -46,8 +73,17 @@ const fetchOne = async () => {
   loading.value = false
 }
 
+const loadArtworks = async () => {
+  const { data } = await supabase
+    .from('artworks')
+    .select('*')
+    .eq('exhibitionId', id)
+    .order('slot')
+  artworks.value = data || []
+}
+
 onMounted(async () => {
-  await Promise.all([fetchArtists(), fetchOne()])
+  await Promise.all([fetchArtists(), fetchOne(), loadArtworks()])
 })
 
 const enableEdit = () => { editMode.value = true; title.value = 'Редагувати виставку' }
@@ -84,12 +120,11 @@ const del = async () => {
   navigateTo('/admin/exhibitions')
 }
 
-// file inputs (приховані)
+// Cover/Card uploads (contain, fixed height in template)
 const coverInput = ref<HTMLInputElement|null>(null)
 const cardInput  = ref<HTMLInputElement|null>(null)
 const pickCover = () => coverInput.value?.click()
 const pickCard  = () => cardInput.value?.click()
-
 const onCoverChange = async (e: Event) => {
   const f = (e.target as HTMLInputElement).files?.[0]
   if (!f || !form.value?.id) return
@@ -103,6 +138,67 @@ const onCardChange = async (e: Event) => {
   const url = await uploadCardForExhibition(form.value.id, f)
   form.value.cardUrl = url
   await supabase.from('exhibitions').update({ cardUrl: url }).eq('id', form.value.id)
+}
+
+// --- Artworks dialog logic ---
+const openAddArtwork = () => {
+  editingId.value = null
+  artForm.value = { exhibitionId: id, artistId: form.value?.painterId || null, title: '', year: null, description: '', slot: 1, imageUrl: null }
+  filePending.value = null
+  dialog.value = true
+}
+
+const openEditArtwork = (a: Artwork) => {
+  editingId.value = a.id || null
+  artForm.value = { ...a }
+  filePending.value = null
+  dialog.value = true
+}
+
+const saveArtwork = async () => {
+  // валідація
+  if (!artForm.value.title?.trim()) return alert('Вкажіть назву роботи')
+  if (!artForm.value.slot || artForm.value.slot < 1 || artForm.value.slot > 6) return alert('Номер має бути 1..6')
+
+  // якщо змінюємо слот у існуючої роботи — пересунути файл
+  if (editingId.value && artworks.value.find(a => a.id === editingId.value)) {
+    const prev = artworks.value.find(a => a.id === editingId.value)!
+    if (prev.slot !== artForm.value.slot && prev.imageUrl) {
+      const newUrl = await moveArtwork(id, prev.slot, artForm.value.slot)
+      artForm.value.imageUrl = newUrl
+    }
+  }
+
+  // якщо є новий файл — завантажити за новим слотом
+  if (filePending.value) {
+    const url = await uploadArtwork(id, artForm.value.slot, filePending.value)
+    artForm.value.imageUrl = url
+  }
+
+  // зберегти метадані
+  if (editingId.value) {
+    await supabase.from('artworks').update({
+      title: artForm.value.title.trim(),
+      year: artForm.value.year,
+      description: artForm.value.description || '',
+      slot: artForm.value.slot,
+      imageUrl: artForm.value.imageUrl,
+      artistId: form.value?.painterId || null
+    }).eq('id', editingId.value)
+  } else {
+    await supabase.from('artworks').insert({
+      exhibitionId: id,
+      artistId: form.value?.painterId || null,
+      title: artForm.value.title.trim(),
+      year: artForm.value.year,
+      description: artForm.value.description || '',
+      slot: artForm.value.slot,
+      imageUrl: artForm.value.imageUrl
+    })
+  }
+
+  dialog.value = false
+  await loadArtworks()
 }
 </script>
 
@@ -168,30 +264,85 @@ const onCardChange = async (e: Event) => {
 
       <div class="images">
         <div>
-          <div class="lbl">Cover (100px)</div>
+          <div class="lbl">Cover (фікс. висота 100px, пропорції збережені)</div>
           <div class="row">
             <v-btn v-if="editMode" variant="tonal" @click="pickCover">Оберіть файл</v-btn>
           </div>
           <input ref="coverInput" type="file" accept="image/*" class="hidden" @change="onCoverChange" />
-          <v-img v-if="form.coverUrl" :src="form.coverUrl" height="100" cover class="mt-2 rounded-lg" />
+          <v-img
+            v-if="form.coverUrl"
+            :src="form.coverUrl"
+            height="100"
+            contain
+            class="mt-2 rounded-lg img-auto"
+          />
         </div>
         <div>
-          <div class="lbl">Card (100px)</div>
+          <div class="lbl">Card (фікс. висота 100px, пропорції збережені)</div>
           <div class="row">
             <v-btn v-if="editMode" variant="tonal" @click="pickCard">Оберіть файл</v-btn>
           </div>
           <input ref="cardInput" type="file" accept="image/*" class="hidden" @change="onCardChange" />
-          <v-img v-if="form.cardUrl" :src="form.cardUrl" height="100" cover class="mt-2 rounded-lg" />
+          <v-img
+            v-if="form.cardUrl"
+            :src="form.cardUrl"
+            height="100"
+            contain
+            class="mt-2 rounded-lg img-auto"
+          />
         </div>
       </div>
 
       <div class="artworks">
-        <div class="subhead">Роботи (макс. 6)</div>
+        <div class="head2">
+          <div class="subhead">Роботи (макс. 6)</div>
+          <v-btn variant="tonal" @click="openAddArtwork">Додати роботу</v-btn>
+        </div>
         <div class="slots">
-          <div v-for="i in 6" :key="i" class="slot">—</div>
+          <div
+            v-for="i in 6"
+            :key="i"
+            class="slot"
+            @click="openEditArtwork(artworks.find(a => a.slot===i) || { exhibitionId: id, artistId: form?.painterId || null, title: '', year: null, description: '', slot: i, imageUrl: null })"
+          >
+            <v-img
+              v-if="artworks.find(a => a.slot===i)?.imageUrl"
+              :src="artworks.find(a => a.slot===i)?.imageUrl"
+              height="100"
+              contain
+              class="rounded-lg img-auto"
+            />
+            <div v-else class="placeholder">—</div>
+            <div class="caption">
+              {{ artworks.find(a => a.slot===i)?.title || ('Робота ' + i) }}
+            </div>
+          </div>
         </div>
       </div>
     </v-card>
+
+    <!-- Dialog add/edit artwork -->
+    <v-dialog v-model="dialog" max-width="520">
+      <v-card class="pa-4">
+        <h2 class="text-subtitle-1 mb-2">{{ editingId ? 'Редагувати роботу' : 'Додати роботу' }}</h2>
+        <v-text-field v-model="artForm.title" label="Назва роботи" />
+        <v-text-field v-model.number="artForm.year" label="Рік" type="number" />
+        <v-textarea v-model="artForm.description" label="Опис" auto-grow />
+        <v-text-field v-model.number="artForm.slot" label="Номер (1–6)" type="number" min="1" max="6" />
+        <div class="row mt-2">
+          <v-btn variant="tonal" @click="pickArtFile">Оберіть файл</v-btn>
+          <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onArtFile" />
+        </div>
+        <div class="mt-3">
+          <v-img v-if="filePending" :src="URL.createObjectURL(filePending)" height="100" contain class="rounded-lg img-auto" />
+          <v-img v-else-if="artForm.imageUrl" :src="artForm.imageUrl" height="100" contain class="rounded-lg img-auto" />
+        </div>
+        <div class="mt-4 d-flex justify-end" style="gap:8px">
+          <v-btn variant="text" @click="dialog=false">Скасувати</v-btn>
+          <v-btn color="primary" @click="saveArtwork">Зберегти</v-btn>
+        </div>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -204,9 +355,12 @@ const onCardChange = async (e: Event) => {
 .lbl { font-size: 12px; opacity:.8; margin-bottom:4px; }
 .hidden { display:none; }
 .row { display:flex; gap:8px; align-items:center; }
+.img-auto { width: auto; } /* висота фіксована, ширина — залежно від зображення */
 .artworks { margin-top: 16px; }
-.subhead { font-weight:600; margin-bottom: 8px; }
+.head2 { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
 .slots { display:grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.slot { height: 80px; border:1px dashed rgba(0,0,0,.2); border-radius:8px; display:flex; align-items:center; justify-content:center;}
+.slot { padding:8px; border:1px dashed rgba(0,0,0,.2); border-radius:8px; text-align:center; cursor:pointer; }
+.placeholder { height:100px; display:flex; align-items:center; justify-content:center; color: rgba(0,0,0,.38); }
+.caption { margin-top:6px; font-size:12px; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @media (max-width: 1200px) { .slots { grid-template-columns: repeat(3, 1fr); } }
 </style>
