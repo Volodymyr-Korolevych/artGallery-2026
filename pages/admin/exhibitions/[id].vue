@@ -14,13 +14,22 @@ const saving  = ref(false)
 const editMode = ref(true)
 const errorMsg = ref<string | null>(null)
 
+const showStart = ref(false)
+const showEnd = ref(false)
+
 const fetchArtists = async () => {
   const { data } = await supabase.from('artists').select('id,"fullName"').order('fullName')
   artists.value = data || []
 }
 
-const fromISOtoDateObj = (s: string | null) => s ? new Date(s) : null
-const toISO = (d: Date | null) => d ? new Date(d).toISOString() : null
+const fromISOtoYMD = (s: string | null) => {
+  if (!s) return null
+  const d = new Date(s)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth()+1).padStart(2,'0')
+  const dd = String(d.getDate()).padStart(2,'0')
+  return `${yyyy}-${mm}-${dd}`
+}
 
 const fetchOne = async () => {
   loading.value = true
@@ -28,8 +37,8 @@ const fetchOne = async () => {
   if (data) {
     form.value = {
       ...data,
-      startDate: fromISOtoDateObj(data.startDate),
-      endDate:   fromISOtoDateObj(data.endDate)
+      startDate: fromISOtoYMD(data.startDate),
+      endDate:   fromISOtoYMD(data.endDate)
     }
     if (data.isPublished) { title.value = 'Переглянути виставку'; editMode.value = false }
     else { title.value = 'Редагувати виставку'; editMode.value = true }
@@ -49,15 +58,15 @@ const save = async () => {
   saving.value = true
   try {
     const payload = { ...form.value }
-    payload.startDate = toISO(payload.startDate)
-    payload.endDate   = toISO(payload.endDate)
+    payload.startDate = form.value.startDate ? new Date(form.value.startDate).toISOString() : null
+    payload.endDate   = form.value.endDate ? new Date(form.value.endDate).toISOString() : null
     const { data, error } = await supabase.from('exhibitions').update(payload).eq('id', id).select('*').single()
     if (error) throw error
     if (data) {
       form.value = {
         ...data,
-        startDate: fromISOtoDateObj(data.startDate),
-        endDate:   fromISOtoDateObj(data.endDate)
+        startDate: fromISOtoYMD(data.startDate),
+        endDate:   fromISOtoYMD(data.endDate)
       }
       if (data.isPublished) { title.value = 'Переглянути виставку'; editMode.value = false }
     }
@@ -122,12 +131,40 @@ const onCardChange = async (e: Event) => {
       />
       <v-textarea v-model="form.description" :readonly="!editMode" label="Опис виставки" auto-grow />
 
-      <VLocaleProvider locale="uk">
-        <div class="grid-2">
-          <v-date-input v-model="form.startDate" label="Дата початку" :readonly="!editMode" prepend-icon="mdi-calendar" />
-          <v-date-input v-model="form.endDate" label="Дата завершення" :readonly="!editMode" prepend-icon="mdi-calendar" />
+      <div class="grid-2">
+        <div>
+          <v-text-field
+            v-model="form.startDate"
+            label="Дата початку"
+            :readonly="true"
+            @click="editMode && (showStart = true)"
+          />
+          <v-dialog v-model="showStart" max-width="360">
+            <v-card>
+              <v-date-picker v-model="form.startDate" locale="uk" hide-actions />
+              <v-card-actions class="justify-end">
+                <v-btn variant="text" @click="showStart=false">OK</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
         </div>
-      </VLocaleProvider>
+        <div>
+          <v-text-field
+            v-model="form.endDate"
+            label="Дата завершення"
+            :readonly="true"
+            @click="editMode && (showEnd = true)"
+          />
+          <v-dialog v-model="showEnd" max-width="360">
+            <v-card>
+              <v-date-picker v-model="form.endDate" locale="uk" hide-actions />
+              <v-card-actions class="justify-end">
+                <v-btn variant="text" @click="showEnd=false">OK</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+        </div>
+      </div>
 
       <div class="images">
         <div>
