@@ -7,14 +7,13 @@ create table if not exists public.artworks (
   description text,
   slot int not null check (slot between 1 and 6),
   imageUrl text,
-  createdAt timestamptz not null default now(),
-  updatedAt timestamptz not null default now()
+  "createdAt" timestamptz not null default now(),
+  "updatedAt" timestamptz not null default now()
 );
 
 create unique index if not exists artworks_exh_slot_uidx
   on public.artworks(exhibitionId, slot);
 
--- прості тригери оновлення часу
 create or replace function public.set_updated_at()
 returns trigger language plpgsql as $$
 begin
@@ -27,10 +26,8 @@ create trigger set_artworks_updated_at
   before update on public.artworks
   for each row execute function public.set_updated_at();
 
--- RLS (за потреби підрегулюємо під вашу модель)
 alter table public.artworks enable row level security;
 
--- читати всі (публічні метадані), якщо потрібно — звузимо пізніше
 do $$
 begin
   if not exists (
@@ -42,7 +39,6 @@ begin
   end if;
 end $$;
 
--- створювати/оновлювати/видаляти — лише авторизованим (адмін має бути у profiles.role)
 do $$
 begin
   if not exists (

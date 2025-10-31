@@ -18,7 +18,6 @@ const errorMsg = ref<string | null>(null)
 const showStart = ref(false)
 const showEnd = ref(false)
 
-// Artworks list
 type Artwork = {
   id?: number
   exhibitionId: number
@@ -37,6 +36,8 @@ const artForm = ref<Artwork>({
 const fileInput = ref<HTMLInputElement|null>(null)
 const filePending = ref<File|null>(null)
 const editingId = ref<number | null>(null)
+const uploadBusy = ref(false)
+const uploadError = ref<string | null>(null)
 
 const pickArtFile = () => fileInput.value?.click()
 const onArtFile = (e: Event) => {
@@ -120,7 +121,6 @@ const del = async () => {
   navigateTo('/admin/exhibitions')
 }
 
-// Cover/Card uploads (contain, fixed height in template)
 const coverInput = ref<HTMLInputElement|null>(null)
 const cardInput  = ref<HTMLInputElement|null>(null)
 const pickCover = () => coverInput.value?.click()
@@ -140,7 +140,6 @@ const onCardChange = async (e: Event) => {
   await supabase.from('exhibitions').update({ cardUrl: url }).eq('id', form.value.id)
 }
 
-// --- Artworks dialog logic ---
 const openAddArtwork = () => {
   editingId.value = null
   artForm.value = { exhibitionId: id, artistId: form.value?.painterId || null, title: '', year: null, description: '', slot: 1, imageUrl: null }
@@ -156,49 +155,55 @@ const openEditArtwork = (a: Artwork) => {
 }
 
 const saveArtwork = async () => {
-  // валідація
-  if (!artForm.value.title?.trim()) return alert('Вкажіть назву роботи')
-  if (!artForm.value.slot || artForm.value.slot < 1 || artForm.value.slot > 6) return alert('Номер має бути 1..6')
-
-  // якщо змінюємо слот у існуючої роботи — пересунути файл
-  if (editingId.value && artworks.value.find(a => a.id === editingId.value)) {
-    const prev = artworks.value.find(a => a.id === editingId.value)!
-    if (prev.slot !== artForm.value.slot && prev.imageUrl) {
-      const newUrl = await moveArtwork(id, prev.slot, artForm.value.slot)
-      artForm.value.imageUrl = newUrl
+  uploadError.value = null
+  try {
+    if (!artForm.value.title?.trim()) throw new Error('Вкажіть назву роботи')
+    if (!artForm.value.slot || artForm.value.slot < 1 || artForm.value.slot > 6) {
+      throw new Error('Номер має бути від 1 до 6')
     }
-  }
+    uploadBusy.value = true
 
-  // якщо є новий файл — завантажити за новим слотом
-  if (filePending.value) {
-    const url = await uploadArtwork(id, artForm.value.slot, filePending.value)
-    artForm.value.imageUrl = url
-  }
+    if (editingId.value) {
+      const prev = artworks.value.find(a => a.id === editingId.value)
+      if (prev && prev.slot !== artForm.value.slot && prev.imageUrl) {
+        const newUrl = await moveArtwork(id, prev.slot, artForm.value.slot)
+        if (newUrl) artForm.value.imageUrl = newUrl
+      }
+    }
 
-  // зберегти метадані
-  if (editingId.value) {
-    await supabase.from('artworks').update({
-      title: artForm.value.title.trim(),
-      year: artForm.value.year,
-      description: artForm.value.description || '',
-      slot: artForm.value.slot,
-      imageUrl: artForm.value.imageUrl,
-      artistId: form.value?.painterId || null
-    }).eq('id', editingId.value)
-  } else {
-    await supabase.from('artworks').insert({
-      exhibitionId: id,
-      artistId: form.value?.painterId || null,
-      title: artForm.value.title.trim(),
-      year: artForm.value.year,
-      description: artForm.value.description || '',
-      slot: artForm.value.slot,
-      imageUrl: artForm.value.imageUrl
-    })
-  }
+    if (filePending.value) {
+      const url = await uploadArtwork(id, artForm.value.slot, filePending.value)
+      artForm.value.imageUrl = url
+    }
 
-  dialog.value = false
-  await loadArtworks()
+    if (editingId.value) {
+      await supabase.from('artworks').update({
+        title: artForm.value.title.trim(),
+        year: artForm.value.year,
+        description: artForm.value.description || '',
+        slot: artForm.value.slot,
+        imageUrl: artForm.value.imageUrl,
+        artistId: form.value?.painterId || null,
+      }).eq('id', editingId.value)
+    } else {
+      await supabase.from('artworks').insert({
+        exhibitionId: id,
+        artistId: form.value?.painterId || null,
+        title: artForm.value.title.trim(),
+        year: artForm.value.year,
+        description: artForm.value.description || '',
+        slot: artForm.value.slot,
+        imageUrl: artForm.value.imageUrl,
+      })
+    }
+
+    dialog.value = false
+    await loadArtworks()
+  } catch (e:any) {
+    uploadError.value = e?.message || 'Помилка під час збереження роботи'
+  } finally {
+    uploadBusy.value = false
+  }
 }
 </script>
 
@@ -321,10 +326,10 @@ const saveArtwork = async () => {
       </div>
     </v-card>
 
-    <!-- Dialog add/edit artwork -->
     <v-dialog v-model="dialog" max-width="520">
       <v-card class="pa-4">
         <h2 class="text-subtitle-1 mb-2">{{ editingId ? 'Редагувати роботу' : 'Додати роботу' }}</h2>
+        <v-alert v-if="uploadError" type="error" density="compact" class="mb-2">{{ uploadError }}</v-alert>
         <v-text-field v-model="artForm.title" label="Назва роботи" />
         <v-text-field v-model.number="artForm.year" label="Рік" type="number" />
         <v-textarea v-model="artForm.description" label="Опис" auto-grow />
@@ -339,7 +344,7 @@ const saveArtwork = async () => {
         </div>
         <div class="mt-4 d-flex justify-end" style="gap:8px">
           <v-btn variant="text" @click="dialog=false">Скасувати</v-btn>
-          <v-btn color="primary" @click="saveArtwork">Зберегти</v-btn>
+          <v-btn color="primary" :loading="uploadBusy" @click="saveArtwork">Зберегти</v-btn>
         </div>
       </v-card>
     </v-dialog>
@@ -355,7 +360,7 @@ const saveArtwork = async () => {
 .lbl { font-size: 12px; opacity:.8; margin-bottom:4px; }
 .hidden { display:none; }
 .row { display:flex; gap:8px; align-items:center; }
-.img-auto { width: auto; } /* висота фіксована, ширина — залежно від зображення */
+.img-auto { width: auto; }
 .artworks { margin-top: 16px; }
 .head2 { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
 .slots { display:grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
