@@ -1,5 +1,6 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'admin', middleware: 'admin-only' })
+
 const route = useRoute()
 const supabase = useSupabaseClient()
 const { uploadCoverForExhibition, uploadCardForExhibition } = useStorageUpload()
@@ -7,22 +8,14 @@ const { removeExhibitionFiles } = useExhibitionStorage()
 const { uploadArtwork } = useArtworkUpload()
 
 const id = Number(route.params.id)
+
 const title = ref('Редагувати виставку')
 const artists = ref<any[]>([])
 const form = ref<any>(null)
 const loading = ref(true)
 const saving  = ref(false)
 const editMode = ref(true)
-const errorMsg = ref<string | null>(null)
-
-const fromISOtoYMD = (s: string | null) => {
-  if (!s) return null
-  const d = new Date(s)
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth()+1).padStart(2,'0')
-  const dd = String(d.getDate()).padStart(2,'0')
-  return `${yyyy}-${mm}-${dd}`
-}
+const errorMsg = ref<string|null>(null)
 
 type Artwork = {
   id?: number
@@ -36,7 +29,7 @@ type Artwork = {
 }
 const artworks = ref<Artwork[]>([])
 
-// dialog state (slot is fixed)
+// --- Диалог роботи (фіксований слот) ---
 const dialog = ref(false)
 const currentSlot = ref<number>(1)
 const artForm = ref<Artwork>({
@@ -44,13 +37,45 @@ const artForm = ref<Artwork>({
 })
 const fileInput = ref<HTMLInputElement|null>(null)
 const filePending = ref<File|null>(null)
-const editingId = ref<number | null>(null)
+const editingId = ref<number|null>(null)
 const uploadBusy = ref(false)
-const uploadError = ref<string | null>(null)
+const uploadError = ref<string|null>(null)
+
+// Client-only прев'ю (щоб не ламати SSR)
+const isClient = ref(false)
+onMounted(() => { isClient.value = true })
+const previewUrl = ref<string|null>(null)
+let _prevObjectUrl: string|null = null
+watch(() => filePending.value, (f) => {
+  if (_prevObjectUrl) { URL.revokeObjectURL(_prevObjectUrl); _prevObjectUrl = null }
+  if (f) {
+    const u = URL.createObjectURL(f)
+    _prevObjectUrl = u
+    previewUrl.value = u
+  } else {
+    previewUrl.value = artForm.value?.imageUrl || null
+  }
+})
+watch(() => artForm.value?.imageUrl, (u) => {
+  if (!filePending.value) previewUrl.value = u || null
+})
+onBeforeUnmount(() => {
+  if (_prevObjectUrl) URL.revokeObjectURL(_prevObjectUrl)
+})
+
 const pickArtFile = () => fileInput.value?.click()
 const onArtFile = (e: Event) => {
   const f = (e.target as HTMLInputElement).files?.[0] || null
   filePending.value = f
+}
+
+const fromISOtoYMD = (s: string|null) => {
+  if (!s) return null
+  const d = new Date(s)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth()+1).padStart(2,'0')
+  const dd = String(d.getDate()).padStart(2,'0')
+  return `${yyyy}-${mm}-${dd}`
 }
 
 const fetchArtists = async () => {
@@ -95,7 +120,7 @@ const saveExhibition = async () => {
     payload.endDate   = form.value.endDate ? new Date(form.value.endDate).toISOString() : null
     const { data, error } = await supabase.from('exhibitions').update(payload).eq('id', id).select('*').single()
     if (error) throw error
-    if (data && data.isPublished) { title.value = 'Переглянути виставку'; editMode.value = false }
+    if (data?.isPublished) { title.value = 'Переглянути виставку'; editMode.value = false }
   } catch (e:any) {
     errorMsg.value = e?.message || 'Помилка збереження'
   } finally {
@@ -110,7 +135,7 @@ const delExhibition = async () => {
   navigateTo('/admin/exhibitions')
 }
 
-// cover/card uploads (contain + fixed height in template)
+// Cover/Card uploads (збереження пропорцій у шаблоні)
 const coverInput = ref<HTMLInputElement|null>(null)
 const cardInput  = ref<HTMLInputElement|null>(null)
 const pickCover = () => coverInput.value?.click()
@@ -130,7 +155,6 @@ const onCardChange = async (e: Event) => {
   await supabase.from('exhibitions').update({ cardUrl: url }).eq('id', form.value.id)
 }
 
-// open dialog by slot click; slot is fixed, no editing
 const openSlotDialog = (slot: number) => {
   currentSlot.value = slot
   const existing = artworks.value.find(a => a.slot === slot)
@@ -151,6 +175,8 @@ const openSlotDialog = (slot: number) => {
   }
   filePending.value = null
   uploadError.value = null
+  // початкове прев'ю
+  previewUrl.value = artForm.value.imageUrl || null
   dialog.value = true
 }
 
@@ -160,13 +186,12 @@ const saveArtwork = async () => {
     if (!artForm.value.title?.trim()) throw new Error('Вкажіть назву роботи')
     uploadBusy.value = true
 
-    // upload file if selected
+    // якщо вибрано новий файл — завантажити в images/exhibitions/<id>/artwork<slot>.jpg
     if (filePending.value) {
       const url = await uploadArtwork(id, artForm.value.slot, filePending.value)
       artForm.value.imageUrl = url
     }
 
-    // persist metadata
     if (editingId.value) {
       await supabase.from('artworks').update({
         title: artForm.value.title.trim(),
@@ -249,12 +274,7 @@ const saveArtwork = async () => {
       <div class="artworks">
         <div class="subhead">Роботи (макс. 6) — клікніть по слоту</div>
         <div class="slots">
-          <div
-            v-for="i in 6"
-            :key="i"
-            class="slot"
-            @click="openSlotDialog(i)"
-          >
+          <div v-for="i in 6" :key="i" class="slot" @click="openSlotDialog(i)">
             <v-img
               v-if="artworks.find(a => a.slot===i)?.imageUrl"
               :src="artworks.find(a => a.slot===i)?.imageUrl"
@@ -263,16 +283,14 @@ const saveArtwork = async () => {
               class="rounded-lg img-auto"
             />
             <div v-else class="placeholder">—</div>
-            <div class="caption">
-              {{ artworks.find(a => a.slot===i)?.title || ('Робота ' + i) }}
-            </div>
+            <div class="caption">{{ artworks.find(a => a.slot===i)?.title || ('Робота ' + i) }}</div>
           </div>
         </div>
       </div>
     </v-card>
 
-    <!-- Диалог: фіксований слот -->
-    <v-dialog v-model="dialog" max-width="520">
+    <!-- ДІАЛОГ: фіксований слот, без фокус-пастки -->
+    <v-dialog v-model="dialog" max-width="520" :retain-focus="false">
       <v-card class="pa-4">
         <h2 class="text-subtitle-1 mb-2">Робота {{ currentSlot }}</h2>
         <v-alert v-if="uploadError" type="error" density="compact" class="mb-2">{{ uploadError }}</v-alert>
@@ -285,9 +303,17 @@ const saveArtwork = async () => {
           <v-btn variant="tonal" @click="pickArtFile">Оберіть файл</v-btn>
           <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onArtFile" />
         </div>
+
         <div class="mt-3">
-          <v-img v-if="filePending" :src="URL.createObjectURL(filePending)" height="100" contain class="rounded-lg img-auto" />
-          <v-img v-else-if="artForm.imageUrl" :src="artForm.imageUrl" height="100" contain class="rounded-lg img-auto" />
+          <client-only v-if="isClient">
+            <v-img
+              v-if="previewUrl"
+              :src="previewUrl"
+              height="100"
+              contain
+              class="rounded-lg img-auto"
+            />
+          </client-only>
         </div>
 
         <div class="mt-4 d-flex justify-end" style="gap:8px">
