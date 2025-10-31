@@ -21,8 +21,24 @@ const save = async () => {
       country: form.value.country || '',
       imageUrl: null
     }
-    const { data, error } = await supabase.from('artists').insert(payload).select('id').single()
+    const { data, error } = await supabase
+      .from('artists')
+      .insert({
+        fullName: form.value.fullName.trim(),
+        description: form.value.description || '',
+        birthYear: form.value.birthYear,
+        country: form.value.country || '',
+        imageUrl: null
+      })
+      .select('id')
+      .single()
     if (error) throw error
+
+    // технічний унікальний slug на основі id
+    await supabase.from('artists')
+      .update({ slug: `artist-${data.id}` })
+      .eq('id', data.id)
+    
     navigateTo('/admin/artists/' + data.id)
   } catch (e:any) {
     errorMsg.value = e?.message || 'Помилка збереження'
