@@ -33,7 +33,7 @@ jobs:
           rm -f pages/admin/artists.vue || true
           rm -f pages/admin/artworks.vue || true
 
-          mkdir -p pages/admin/artists composables
+          mkdir -p pages/admin/artists 
 
           # 1) Composable: extend useStorageUpload (remove uploadArtworkImage, add uploadArtistPortrait)
           if [ -f composables/useStorageUpload.ts ]; then
