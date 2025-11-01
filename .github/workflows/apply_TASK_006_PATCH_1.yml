@@ -1,0 +1,341 @@
+name: Apply TASK-006-PATCH-1 (year validation + Close buttons)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to commit to"
+        required: true
+        default: "main"
+      commit_message:
+        description: "Commit message"
+        required: true
+        default: "TASK-006-PATCH-1: validate year fields; add Close buttons (artists new/[id], exhibitions [id])"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      # ---------- artists/new.vue ----------
+      - name: Patch pages/admin/artists/new.vue
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="pages/admin/artists/new.vue"
+          mkdir -p "$(dirname "$FILE")"
+          cat > "$FILE" <<'VUE'
+          <script setup lang="ts">
+          definePageMeta({ layout: 'admin', middleware: 'admin-only' })
+          const supabase = useSupabaseClient()
+
+          const title = ref('Додати художника')
+          const form = ref<{ fullName: string; description: string; birthYear: number | null; country: string }>(
+            { fullName: '', description: '', birthYear: null, country: '' }
+          )
+          const saving = ref(false)
+          const errorMsg = ref<string|null>(null)
+
+          // Валідація року: 4 цифри, межі [1000..2100]
+          const yearRules = [
+            (v: any) => v === null || v === '' || /^\d{4}$/.test(String(v)) || 'Введіть 4 цифри (рік)',
+            (v: any) => v === null || v === '' || (+v >= 1000 && +v <= 2100) || 'Рік має бути у межах 1000–2100',
+          ]
+          const birthYearModel = computed({
+            get: () => form.value.birthYear,
+            set: (val: any) => {
+              if (val === '' || val === null) { form.value.birthYear = null; return }
+              const n = Number(String(val).replace(/\D/g, '').slice(0,4))
+              form.value.birthYear = isNaN(n) ? null : n
+            }
+          })
+
+          const clampYear = () => {
+            const y = form.value.birthYear
+            if (y === null) return
+            if (y < 1000) form.value.birthYear = 1000
+            if (y > 2100) form.value.birthYear = 2100
+          }
+
+          const close = () => navigateTo('/admin/artists')
+
+          const save = async () => {
+            errorMsg.value = null
+            if (!form.value.fullName.trim()) { errorMsg.value = 'Вкажіть ім’я художника'; return }
+            if (form.value.birthYear !== null) {
+              const y = form.value.birthYear
+              if (!/^\d{4}$/.test(String(y)) || y < 1000 || y > 2100) {
+                errorMsg.value = 'Рік має бути 4-значний, у межах 1000–2100'
+                return
+              }
+            }
+            saving.value = true
+            try {
+              const { data, error } = await supabase
+                .from('artists')
+                .insert({
+                  fullName: form.value.fullName.trim(),
+                  description: form.value.description || '',
+                  birthYear: form.value.birthYear,
+                  country: form.value.country || '',
+                  imageUrl: null
+                })
+                .select('id')
+                .single()
+              if (error) throw error
+
+              // технічний slug
+              await supabase.from('artists')
+                .update({ slug: `artist-${data.id}` })
+                .eq('id', data.id)
+
+              navigateTo('/admin/artists/' + data.id)
+            } catch (e:any) {
+              errorMsg.value = e?.message || 'Помилка збереження'
+            } finally {
+              saving.value = false
+            }
+          }
+          </script>
+
+          <template>
+            <div class="page">
+              <div class="head">
+                <h1 class="text-h5">{{ title }}</h1>
+                <div class="actions">
+                  <v-btn variant="text" @click="close">Закрити</v-btn>
+                  <v-btn color="primary" :loading="saving" @click="save">Зберегти</v-btn>
+                </div>
+              </div>
+
+              <v-card class="pa-4">
+                <v-alert v-if="errorMsg" type="error" density="compact" class="mb-3">{{ errorMsg }}</v-alert>
+
+                <v-text-field v-model="form.fullName" label="Ім’я" />
+                <v-textarea v-model="form.description" label="Опис" auto-grow />
+                <div class="grid-2">
+                  <v-text-field
+                    :model-value="birthYearModel"
+                    @update:model-value="birthYearModel = $event"
+                    @blur="clampYear"
+                    label="Рік народження"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="\\d{4}"
+                    :rules="yearRules"
+                    hint="4 цифри (1000–2100)"
+                    persistent-hint
+                  />
+                  <v-text-field v-model="form.country" label="Країна" />
+                </div>
+
+                <v-alert type="info" variant="tonal" density="compact" class="mt-2">
+                  Портрет можна додати після створення — у режимі редагування.
+                </v-alert>
+              </v-card>
+            </div>
+          </template>
+
+          <style scoped>
+          .page { display: grid; gap: 12px; }
+          .head { display:flex; align-items:center; justify-content:space-between; }
+          .actions { display:flex; gap:8px; }
+          .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+          </style>
+          VUE
+
+      # ---------- artists/[id].vue ----------
+      - name: Patch pages/admin/artists/[id].vue
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="pages/admin/artists/[id].vue"
+          mkdir -p "$(dirname "$FILE")"
+          cat > "$FILE" <<'VUE'
+          <script setup lang="ts">
+          definePageMeta({ layout: 'admin', middleware: 'admin-only' })
+          const route = useRoute()
+          const supabase = useSupabaseClient()
+          const { uploadArtistPortrait } = useStorageUpload()
+
+          const id = Number(route.params.id)
+          const title = ref('Редагувати художника')
+          const form = ref<any>(null)
+          const loading = ref(true)
+          const saving  = ref(false)
+          const errorMsg = ref<string|null>(null)
+
+          const close = () => navigateTo('/admin/artists')
+
+          // валідація року як у /new
+          const yearRules = [
+            (v: any) => v === null || v === '' || /^\d{4}$/.test(String(v)) || 'Введіть 4 цифри (рік)',
+            (v: any) => v === null || v === '' || (+v >= 1000 && +v <= 2100) || 'Рік має бути у межах 1000–2100',
+          ]
+          const birthYearModel = computed({
+            get: () => form.value?.birthYear ?? null,
+            set: (val: any) => {
+              if (!form.value) return
+              if (val === '' || val === null) { form.value.birthYear = null; return }
+              const n = Number(String(val).replace(/\D/g, '').slice(0,4))
+              form.value.birthYear = isNaN(n) ? null : n
+            }
+          })
+          const clampYear = () => {
+            if (!form.value) return
+            const y = form.value.birthYear
+            if (y === null) return
+            if (y < 1000) form.value.birthYear = 1000
+            if (y > 2100) form.value.birthYear = 2100
+          }
+
+          const fileInput = ref<HTMLInputElement|null>(null)
+          const pickFile = () => fileInput.value?.click()
+          const onFile = async (e: Event) => {
+            const f = (e.target as HTMLInputElement).files?.[0]
+            if (!f || !form.value?.id) return
+            try {
+              const url = await uploadArtistPortrait(form.value.id, f)
+              form.value.imageUrl = url
+              await supabase.from('artists').update({ imageUrl: url }).eq('id', form.value.id)
+            } catch (e:any) {
+              errorMsg.value = e?.message || 'Помилка завантаження зображення'
+            }
+          }
+
+          const fetchOne = async () => {
+            loading.value = true
+            const { data, error } = await supabase
+              .from('artists')
+              .select('id,"fullName",description,birthYear,country,imageUrl')
+              .eq('id', id).maybeSingle()
+            if (error) errorMsg.value = error.message
+            if (data) form.value = data
+            loading.value = false
+          }
+
+          onMounted(fetchOne)
+
+          const save = async () => {
+            if (!form.value) return
+            errorMsg.value = null
+
+            if (form.value.birthYear !== null) {
+              const y = form.value.birthYear
+              if (!/^\d{4}$/.test(String(y)) || y < 1000 || y > 2100) {
+                errorMsg.value = 'Рік має бути 4-значний, у межах 1000–2100'
+                return
+              }
+            }
+
+            saving.value = true
+            try {
+              const payload:any = {
+                fullName: form.value.fullName?.trim(),
+                description: form.value.description || '',
+                birthYear: form.value.birthYear,
+                country: form.value.country || '',
+                imageUrl: form.value.imageUrl || null
+              }
+              const { error } = await supabase.from('artists').update(payload).eq('id', id)
+              if (error) throw error
+            } catch (e:any) {
+              errorMsg.value = e?.message || 'Помилка збереження'
+            } finally {
+              saving.value = false
+            }
+          }
+          </script>
+
+          <template>
+            <div class="page" v-if="form">
+              <div class="head">
+                <h1 class="text-h5">{{ title }}</h1>
+                <div class="actions">
+                  <v-btn variant="text" @click="close">Закрити</v-btn>
+                  <v-btn color="primary" :loading="saving" @click="save">Зберегти</v-btn>
+                </div>
+              </div>
+
+              <v-card class="pa-4">
+                <v-alert v-if="errorMsg" type="error" density="compact" class="mb-3">{{ errorMsg }}</v-alert>
+
+                <v-text-field v-model="form.fullName" label="Ім’я" />
+                <v-textarea v-model="form.description" label="Опис" auto-grow />
+                <div class="grid-2">
+                  <v-text-field
+                    :model-value="birthYearModel"
+                    @update:model-value="birthYearModel = $event"
+                    @blur="clampYear"
+                    label="Рік народження"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="\\d{4}"
+                    :rules="yearRules"
+                    hint="4 цифри (1000–2100)"
+                    persistent-hint
+                  />
+                  <v-text-field v-model="form.country" label="Країна" />
+                </div>
+
+                <div class="image mt-4">
+                  <div class="lbl">Портрет (фікс. висота 100px, пропорції збережені)</div>
+                  <div class="row">
+                    <v-btn variant="tonal" @click="pickFile">Оберіть файл</v-btn>
+                    <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onFile" />
+                  </div>
+                  <v-img
+                    v-if="form.imageUrl"
+                    :src="form.imageUrl"
+                    height="100"
+                    contain
+                    class="mt-2 rounded img-auto"
+                  />
+                </div>
+              </v-card>
+            </div>
+          </template>
+
+          <style scoped>
+          .page { display: grid; gap: 12px; }
+          .head { display:flex; align-items:center; justify-content:space-between; }
+          .actions { display:flex; gap:8px; }
+          .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+          .hidden { display:none; }
+          .row { display:flex; align-items:center; gap:8px; }
+          .img-auto { width: auto; }
+          .lbl { font-size: 12px; opacity:.8; margin-bottom:4px; }
+          </style>
+          VUE
+
+      # ---------- exhibitions/[id].vue ----------
+      - name: Patch pages/admin/exhibitions/[id].vue (add Close button)
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="pages/admin/exhibitions/[id].vue"
+          if [ -f "$FILE" ]; then
+            # Додамо кнопку Закрити в шапці (поруч із Зберегти/Видалити)
+            # Якщо вже є — змін не буде.
+            sed -i 's/<div class="actions">/<div class="actions">\
+                  <v-btn variant="text" @click="navigateTo(\\x27\\/admin\\/exhibitions\\x27)">Закрити<\\/v-btn>/' "$FILE" || true
+          fi
+
+      - name: Commit & push
+        run: |
+          git config user.name "gallery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin HEAD:${{ github.event.inputs.branch }}
