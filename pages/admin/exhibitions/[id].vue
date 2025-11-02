@@ -1,6 +1,5 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'admin', middleware: 'admin-only' })
-
 const route = useRoute()
 const supabase = useSupabaseClient()
 const { uploadCoverForExhibition, uploadCardForExhibition } = useStorageUpload()
@@ -8,14 +7,22 @@ const { removeExhibitionFiles } = useExhibitionStorage()
 const { uploadArtwork } = useArtworkUpload()
 
 const id = Number(route.params.id)
-
 const title = ref('Редагувати виставку')
 const artists = ref<any[]>([])
 const form = ref<any>(null)
 const loading = ref(true)
 const saving  = ref(false)
 const editMode = ref(true)
-const errorMsg = ref<string|null>(null)
+const errorMsg = ref<string | null>(null)
+
+const fromISOtoYMD = (s: string | null) => {
+  if (!s) return null
+  const d = new Date(s)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth()+1).padStart(2,'0')
+  const dd = String(d.getDate()).padStart(2,'0')
+  return `${yyyy}-${mm}-${dd}`
+}
 
 type Artwork = {
   id?: number
@@ -29,7 +36,7 @@ type Artwork = {
 }
 const artworks = ref<Artwork[]>([])
 
-// --- Диалог роботи (фіксований слот) ---
+// ----- Dialog (fixed slot) -----
 const dialog = ref(false)
 const currentSlot = ref<number>(1)
 const artForm = ref<Artwork>({
@@ -37,15 +44,15 @@ const artForm = ref<Artwork>({
 })
 const fileInput = ref<HTMLInputElement|null>(null)
 const filePending = ref<File|null>(null)
-const editingId = ref<number|null>(null)
+const editingId = ref<number | null>(null)
 const uploadBusy = ref(false)
-const uploadError = ref<string|null>(null)
+const uploadError = ref<string | null>(null)
 
-// Client-only прев'ю (щоб не ламати SSR)
 const isClient = ref(false)
 onMounted(() => { isClient.value = true })
-const previewUrl = ref<string|null>(null)
-let _prevObjectUrl: string|null = null
+
+const previewUrl = ref<string | null>(null)
+let _prevObjectUrl: string | null = null
 watch(() => filePending.value, (f) => {
   if (_prevObjectUrl) { URL.revokeObjectURL(_prevObjectUrl); _prevObjectUrl = null }
   if (f) {
@@ -67,15 +74,6 @@ const pickArtFile = () => fileInput.value?.click()
 const onArtFile = (e: Event) => {
   const f = (e.target as HTMLInputElement).files?.[0] || null
   filePending.value = f
-}
-
-const fromISOtoYMD = (s: string|null) => {
-  if (!s) return null
-  const d = new Date(s)
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth()+1).padStart(2,'0')
-  const dd = String(d.getDate()).padStart(2,'0')
-  return `${yyyy}-${mm}-${dd}`
 }
 
 const fetchArtists = async () => {
@@ -109,6 +107,7 @@ onMounted(async () => {
 })
 
 const enableEdit = () => { editMode.value = true; title.value = 'Редагувати виставку' }
+const close = () => navigateTo('/admin/exhibitions')
 
 const saveExhibition = async () => {
   if (!form.value) return
@@ -135,7 +134,7 @@ const delExhibition = async () => {
   navigateTo('/admin/exhibitions')
 }
 
-// Cover/Card uploads (збереження пропорцій у шаблоні)
+// Cover/Card uploads
 const coverInput = ref<HTMLInputElement|null>(null)
 const cardInput  = ref<HTMLInputElement|null>(null)
 const pickCover = () => coverInput.value?.click()
@@ -175,7 +174,6 @@ const openSlotDialog = (slot: number) => {
   }
   filePending.value = null
   uploadError.value = null
-  // початкове прев'ю
   previewUrl.value = artForm.value.imageUrl || null
   dialog.value = true
 }
@@ -186,7 +184,6 @@ const saveArtwork = async () => {
     if (!artForm.value.title?.trim()) throw new Error('Вкажіть назву роботи')
     uploadBusy.value = true
 
-    // якщо вибрано новий файл — завантажити в images/exhibitions/<id>/artwork<slot>.jpg
     if (filePending.value) {
       const url = await uploadArtwork(id, artForm.value.slot, filePending.value)
       artForm.value.imageUrl = url
@@ -227,6 +224,7 @@ const saveArtwork = async () => {
     <div class="head">
       <h1 class="text-h5">{{ title }}</h1>
       <div class="actions">
+        <v-btn variant="text" @click="close">Закрити</v-btn>
         <v-btn v-if="!editMode" variant="tonal" @click="enableEdit">Редагувати</v-btn>
         <v-btn v-if="editMode" color="error" variant="tonal" @click="delExhibition">Видалити</v-btn>
         <v-btn v-if="editMode" color="primary" :loading="saving" @click="saveExhibition">Зберегти</v-btn>
