@@ -6,31 +6,18 @@ const loading = ref(true)
 const errorMsg = ref<string|null>(null)
 const items = ref<Record<string, any>[]>([])
 
-// Сортуємо за датою створення "нові зверху".
-// Поле може називатись created_at або createdAt — спробуємо обидва:
-const fetchReviews = async () => {
+const fetchAll = async () => {
   loading.value = true
   errorMsg.value = null
-
-  // Перший варіант: created_at
-  let q = supabase.from('reviews').select('*').order('created_at', { ascending: false })
-  let { data, error } = await q
-  // Якщо помилка сортування (немає такого поля) — пробуємо createdAt
-  if (error) {
-    const q2 = supabase.from('reviews').select('*').order('createdAt', { ascending: false })
-    const res2 = await q2
-    data = res2.data
-    error = res2.error
-  }
-  if (error) {
-    errorMsg.value = error.message
-  } else {
-    items.value = data || []
-  }
+  const { data, error } = await supabase
+    .from('contact_messages')
+    .select('id,"name","email","message","createdAt"')
+    .order('createdAt', { ascending: false })
+  if (error) errorMsg.value = error.message
+  items.value = data || []
   loading.value = false
 }
-
-onMounted(fetchReviews)
+onMounted(fetchAll)
 
 const fmtDate = (v:any) => {
   if (!v) return '—'
@@ -55,20 +42,20 @@ const close = () => navigateTo('/admin')
       <v-table density="comfortable">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Автор</th>
-            <th>Рейтинг</th>
-            <th>Текст</th>
-            <th>Створено</th>
+            <th style="width:70px">ID</th>
+            <th style="width:200px">Ім’я</th>
+            <th style="width:240px">Email</th>
+            <th>Повідомлення</th>
+            <th style="width:200px">Створено</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="r in items" :key="r.id">
-            <td>{{ r.id ?? '—' }}</td>
-            <td>{{ r.author ?? r.userName ?? r.email ?? '—' }}</td>
-            <td>{{ r.rating ?? '—' }}</td>
-            <td style="max-width:520px">{{ r.text ?? r.content ?? '—' }}</td>
-            <td>{{ fmtDate(r.created_at ?? r.createdAt) }}</td>
+            <td class="readonly">{{ r.id }}</td>
+            <td>{{ r.name }}</td>
+            <td>{{ r.email }}</td>
+            <td style="max-width:520px; white-space:pre-wrap">{{ r.message }}</td>
+            <td>{{ fmtDate(r.createdAt) }}</td>
           </tr>
           <tr v-if="!loading && items.length===0">
             <td colspan="5" class="muted">Поки немає відгуків</td>
@@ -83,5 +70,6 @@ const close = () => navigateTo('/admin')
 .page { display: grid; gap: 12px; }
 .head { display:flex; align-items:center; justify-content:space-between; }
 .actions { display:flex; gap:8px; }
+.readonly { opacity: .75; }
 .muted { color: rgba(0,0,0,.5); text-align:center; padding: 16px; }
 </style>
