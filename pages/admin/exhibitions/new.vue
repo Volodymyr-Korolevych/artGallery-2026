@@ -11,9 +11,10 @@ const artists = ref<any[]>([])
 const form = ref<any>({
   title: '',
   painterId: null,
+  short: '',         // NEW: короткий опис
   description: '',
-  startDate: null, // 'YYYY-MM-DD'
-  endDate: null,   // 'YYYY-MM-DD'
+  startDate: null,   // 'YYYY-MM-DD'
+  endDate: null      // 'YYYY-MM-DD'
 })
 
 const fetchArtists = async () => {
@@ -22,7 +23,8 @@ const fetchArtists = async () => {
 }
 onMounted(fetchArtists)
 
-const isoOrNull = (s: string | null) => s ? new Date(s).toISOString() : null
+// якщо у вас у БД date, Supabase прийме і 'YYYY-MM-DD', і ISO — лишаємо просту гілку
+const toISOorNull = (s: string | null) => s ? new Date(s).toISOString() : null
 
 const close = () => navigateTo('/admin/exhibitions')
 
@@ -36,12 +38,13 @@ const save = async () => {
     const payload:any = {
       title: form.value.title.trim(),
       painterId: form.value.painterId,
+      short: form.value.short || null,           // NEW
       description: form.value.description || '',
-      startDate: isoOrNull(form.value.startDate),
-      endDate: isoOrNull(form.value.endDate),
+      startDate: toISOorNull(form.value.startDate),
+      endDate: toISOorNull(form.value.endDate),
       coverUrl: null,
       cardUrl: null,
-      isPublished: false,
+      isPublished: false
     }
     const { data, error } = await supabase
       .from('exhibitions')
@@ -79,15 +82,17 @@ const save = async () => {
         item-value="id"
         label="Художник"
       />
-      <v-textarea v-model="form.description" label="Опис виставки" auto-grow />
+
+      <v-textarea v-model="form.short"    label="Короткий опис (1 абзац)" auto-grow />  <!-- NEW -->
+      <v-textarea v-model="form.description" label="Повний опис" auto-grow />
 
       <div class="grid-2">
         <v-text-field v-model="form.startDate" label="Дата початку (YYYY-MM-DD)" />
-        <v-text-field v-model="form.endDate" label="Дата завершення (YYYY-MM-DD)" />
+        <v-text-field v-model="form.endDate"   label="Дата завершення (YYYY-MM-DD)" />
       </div>
 
       <v-alert type="info" variant="tonal" density="compact" class="mt-2">
-        Зображення (cover/card) додамо після створення на сторінці редагування.
+        Зображення (cover/card) додамо після створення — на сторінці редагування.
       </v-alert>
     </v-card>
   </div>

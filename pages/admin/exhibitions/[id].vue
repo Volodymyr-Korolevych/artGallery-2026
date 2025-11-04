@@ -114,9 +114,10 @@ const saveExhibition = async () => {
   errorMsg.value = null
   saving.value = true
   try {
-    const payload = { ...form.value }
+    const payload:any = { ...form.value }
     payload.startDate = form.value.startDate ? new Date(form.value.startDate).toISOString() : null
     payload.endDate   = form.value.endDate ? new Date(form.value.endDate).toISOString() : null
+    // short, description уже в form.value; сервер оновить відповідні поля
     const { data, error } = await supabase.from('exhibitions').update(payload).eq('id', id).select('*').single()
     if (error) throw error
     if (data?.isPublished) { title.value = 'Переглянути виставку'; editMode.value = false }
@@ -243,7 +244,9 @@ const saveArtwork = async () => {
         label="Художник"
         :readonly="!editMode"
       />
-      <v-textarea v-model="form.description" :readonly="!editMode" label="Опис виставки" auto-grow />
+
+      <v-textarea v-model="form.short" :readonly="!editMode" label="Короткий опис (1 абзац)" auto-grow />   <!-- NEW -->
+      <v-textarea v-model="form.description" :readonly="!editMode" label="Повний опис" auto-grow />
 
       <div class="grid-2">
         <v-text-field v-model="form.startDate" label="Дата початку" :readonly="true" />
@@ -254,7 +257,7 @@ const saveArtwork = async () => {
         <div>
           <div class="lbl">Cover (фікс. висота 100px, пропорції збережені)</div>
           <div class="row">
-            <v-btn v-if="editMode" variant="tonal" @click="pickCover">Оберіть файл</v-btn>
+            <v-btn v-if="editMode" variant="tonал" @click="pickCover">Оберіть файл</v-btn>
           </div>
           <input ref="coverInput" type="file" accept="image/*" class="hidden" @change="onCoverChange" />
           <v-img v-if="form.coverUrl" :src="form.coverUrl" height="100" contain class="mt-2 rounded-lg img-auto" />
@@ -262,7 +265,7 @@ const saveArtwork = async () => {
         <div>
           <div class="lbl">Card (фікс. висота 100px, пропорції збережені)</div>
           <div class="row">
-            <v-btn v-if="editMode" variant="tonal" @click="pickCard">Оберіть файл</v-btn>
+            <v-btn v-if="editMode" variant="tonал" @click="pickCard">Оберіть файл</v-btn>
           </div>
           <input ref="cardInput" type="file" accept="image/*" class="hidden" @change="onCardChange" />
           <v-img v-if="form.cardUrl" :src="form.cardUrl" height="100" contain class="mt-2 rounded-lg img-auto" />
@@ -287,7 +290,6 @@ const saveArtwork = async () => {
       </div>
     </v-card>
 
-    <!-- ДІАЛОГ: фіксований слот, без фокус-пастки -->
     <v-dialog v-model="dialog" max-width="520" :retain-focus="false">
       <v-card class="pa-4">
         <h2 class="text-subtitle-1 mb-2">Робота {{ currentSlot }}</h2>
@@ -298,7 +300,7 @@ const saveArtwork = async () => {
         <v-textarea v-model="artForm.description" label="Опис" auto-grow />
 
         <div class="row mt-2">
-          <v-btn variant="tonal" @click="pickArtFile">Оберіть файл</v-btn>
+          <v-btn variant="tonал" @click="pickArtFile">Оберіть файл</v-btn>
           <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onArtFile" />
         </div>
 
