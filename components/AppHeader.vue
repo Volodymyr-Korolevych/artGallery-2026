@@ -1,54 +1,57 @@
 <script setup lang="ts">
-const user = useSupabaseUser()
-const supabase = useSupabaseClient()
-const profile = ref<{ username?: string, role?: string } | null>(null)
-const menu = ref(false)
+const route = useRoute()
+const go = (p: string) => navigateTo(p)
 
-const fetchProfile = async () => {
-  if (!user.value) { profile.value = null; return }
-  const { data, error } = await supabase.from('profiles').select('username, role').eq('id', user.value.id).maybeSingle()
-  if (!error) profile.value = data
-}
-
-onMounted(fetchProfile)
-watch(user, () => fetchProfile())
-
-const logout = async () => {
-  await supabase.auth.signOut()
-  profile.value = null
-  navigateTo('/')
-}
+const links = [
+  { to: '/', label: 'Головна' },
+  { to: '/exhibitions/current', label: 'Експозиції' },  // всередині будуть підсторінки current/past/upcoming
+  { to: '/artists', label: 'Художники' },
+  { to: '/tickets', label: 'Квитки' },
+  { to: '/reviews', label: 'Відгуки' },
+  { to: '/contacts', label: 'Контакти' },
+]
 </script>
 
 <template>
-  <v-app-bar color="primary" density="comfortable" flat>
-    <v-toolbar-title class="font-weight-bold">Art Gallery</v-toolbar-title>
-    <v-spacer />
-    <v-btn variant="text" to="/">Головна</v-btn>
-    <v-btn variant="text" to="/exhibitions/current">Поточна</v-btn>
-    <v-btn variant="text" to="/exhibitions/past">Минулі</v-btn>
-    <v-btn variant="text" to="/exhibitions/upcoming">Майбутні</v-btn>
-    <v-btn variant="text" to="/artists">Художники</v-btn>
-    <v-btn variant="text" to="/tickets">Квитки</v-btn>
-    <v-btn variant="text" to="/contacts">Контакти</v-btn>
-
-    <div class="ml-2">
-      <template v-if="!user">
-        <v-btn color="secondary" to="/login">Увійти</v-btn>
-      </template>
-      <template v-else>
-        <v-menu v-model="menu" :close-on-content-click="true" location="bottom">
-          <template #activator="{ props }">
-            <v-btn v-bind="props" color="secondary">
-              {{ profile?.username || 'Кабінет' }}
-            </v-btn>
-          </template>
-          <v-list>
-            <v-list-item v-if="profile?.role==='admin'" to="/admin">Адмін-панель</v-list-item>
-            <v-list-item @click="logout">Вийти</v-list-item>
-          </v-list>
-        </v-menu>
-      </template>
+  <!-- app -> резервує простір у v-main; fixed top -->
+  <v-app-bar app flat elevation="1" color="white">
+    <div class="container head">
+      <div class="brand" @click="go('/')">Art Gallery</div>
+      <nav class="nav">
+        <NuxtLink
+          v-for="l in links"
+          :key="l.to"
+          :to="l.to"
+          class="nav-link"
+          :class="{ active: route.path === l.to || route.path.startsWith(l.to + '/') }"
+        >{{ l.label }}</NuxtLink>
+      </nav>
     </div>
   </v-app-bar>
 </template>
+
+<style scoped>
+.head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  min-height:64px;
+}
+.brand{
+  font-weight:700;
+  letter-spacing:.2px;
+  cursor:pointer;
+}
+.nav{
+  display:flex; gap: 18px; align-items:center;
+}
+.nav-link{
+  text-decoration:none;
+  color: inherit;
+  opacity:.8;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+.nav-link:hover{ opacity:1; background: rgba(0,0,0,.04); }
+.nav-link.active{ color: var(--brand); opacity:1; background: rgba(30,64,175,.08); }
+</style>

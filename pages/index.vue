@@ -76,7 +76,7 @@ const fmtRange = (s: string | null, e: string | null) => {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page container">
     <!-- Навігаційні "таби": Минулі / Поточна / Майбутні -->
     <div class="tabs">
       <button class="tab" @click="goPast">Минулі</button>
@@ -112,7 +112,7 @@ const fmtRange = (s: string | null, e: string | null) => {
 
         <!-- Права колонка (2/3) -->
         <div class="right">
-          <div class="imgWrap" v-if="ex.coverUrl">
+          <div class="imgWrap img-frame" v-if="ex.coverUrl">
             <v-img :src="ex.coverUrl" :alt="ex.title" class="hero-img" height="520" contain />
           </div>
           <div v-else class="imgPlaceholder">

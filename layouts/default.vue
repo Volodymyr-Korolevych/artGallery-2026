@@ -1,15 +1,19 @@
+<script setup lang="ts">
+</script>
+
 <template>
-  <div class="layout-wrap">
-    <AppHeader />
-    <main class="app-main">
-      <slot />
-    </main>
-    <AppFooter />
+  <!-- УВАГА: v-app та v-main уже у app.vue (зафіксовано раніше).
+       Тут — тільки контент лейауту під AppHeader. -->
+  <AppHeader />
+  <div class="container page-wrap">
+    <slot />
   </div>
+  <AppFooter v-if="false" /> <!-- додасте пізніше; залишено місце -->
 </template>
 
-<style>
-.layout-wrap { display: flex; flex-direction: column; min-height: 100vh; }
-.app-main { padding-top: 72px; flex: 1 0 auto; }
-@media (max-width: 600px) { .app-main { padding-top: 80px; } }
+<style scoped>
+.page-wrap{
+  padding-top: 18px;   /* невеликий відступ від хедера */
+  padding-bottom: 28px;
+}
 </style>

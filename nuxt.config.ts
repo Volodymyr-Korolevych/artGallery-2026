@@ -10,7 +10,8 @@ export default defineNuxtConfig({
       appName: 'Art Gallery 2026'
     }
   },
-  css: ['vuetify/styles'],
+  css: [
+    '@/assets/styles/theme.css','vuetify/styles'],
   build: {
     transpile: ['vuetify']
   },
