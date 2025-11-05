@@ -1,0 +1,239 @@
+name: Apply TASK-009-PATCH (fonts, colors, margins, header)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to commit to"
+        required: true
+        default: "main"
+      commit_message:
+        description: "Commit message"
+        required: true
+        default: "TASK-009-PATCH: global UI (font, colors, margins, gray bg, image frame) + AppHeader + default layout + index tune"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      # 1) Глобальні стилі (шрифт, фон, контейнер, рамка зображень)
+      - name: Write assets/styles/theme.css
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/styles
+          cat > assets/styles/theme.css <<'CSS'
+          /* TASK-009-PATCH: глобальний стиль під зразки */
+          /* Шрифт */
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+          :root{
+            --bg-page: #f7f7f8;              /* злегка сірий фон сторінки */
+            --fg-text: #0b0b0c;
+            --fg-muted: rgba(0,0,0,.65);
+            --brand: #1e40af;               /* акцент (спокійний синій) */
+            --border-soft: rgba(0,0,0,.08); /* м’яка сіра рамка */
+            --container-max: 1200px;        /* ширина контенту */
+            --container-pad: 20px;          /* бокові відступи */
+            --hero-h: 520px;                /* висота героя на головній */
+          }
+
+          html, body {
+            background: var(--bg-page);
+            color: var(--fg-text);
+            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            font-size: 16px;
+          }
+
+          /* Контейнер для всіх публічних сторінок */
+          .container{
+            max-width: var(--container-max);
+            margin: 0 auto;                  /* центрування */
+            padding-left: var(--container-pad);
+            padding-right: var(--container-pad);
+          }
+
+          /* Уніфікована «легка рамка» для зображень */
+          .img-frame{
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,.03);
+            overflow: hidden;
+            background: #fff; /* легкий контраст із сірим фоном */
+          }
+
+          /* Верхні таби (Минулі/Поточна/Майбутні) */
+          .tabs { display:flex; justify-content:center; gap:24px; margin-top:8px; }
+          .tab {
+            background: transparent; border: 0; padding: 4px 8px; cursor: pointer; font-weight: 600; opacity: .75;
+          }
+          .tab:hover { opacity: 1; }
+          .tab.active { color: var(--brand); opacity: 1; }
+
+          /* Службові: слабкі підписи, допоміжний текст */
+          .muted { color: var(--fg-muted); }
+
+          /* Базові відступи для секцій */
+          .section { padding-block: 20px; }
+          CSS
+
+      # 2) nuxt.config.ts: підключити CSS, якщо ще не підключено
+      - name: Ensure theme.css is added to nuxt.config.ts
+        shell: bash
+        run: |
+          set -euo pipefail
+          CONFIG="nuxt.config.ts"
+          if [ -f "$CONFIG" ]; then
+            if ! grep -q "assets/styles/theme.css" "$CONFIG"; then
+              # Вставляємо css: [...] або доповнюємо існуючий масив
+              if grep -q "css:" "$CONFIG"; then
+                sed -i '0,/css: \[/s//css: \[\n    '\''@\/assets\/styles\/theme.css'\'',/' "$CONFIG"
+              else
+                sed -i '0,/export default defineNuxtConfig({/s//export default defineNuxtConfig({\n  css: ['\''@\/assets\/styles\/theme.css'\''],/' "$CONFIG"
+              fi
+            fi
+          else
+            echo "nuxt.config.ts not found, skipping"
+          fi
+
+      # 3) components/AppHeader.vue — головне меню відповідно до документу
+      - name: Write components/AppHeader.vue
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p components
+          cat > components/AppHeader.vue <<'VUE'
+          <script setup lang="ts">
+          const route = useRoute()
+          const go = (p: string) => navigateTo(p)
+
+          const links = [
+            { to: '/', label: 'Головна' },
+            { to: '/exhibitions/current', label: 'Експозиції' },  // всередині будуть підсторінки current/past/upcoming
+            { to: '/artists', label: 'Художники' },
+            { to: '/tickets', label: 'Квитки' },
+            { to: '/reviews', label: 'Відгуки' },
+            { to: '/contacts', label: 'Контакти' },
+          ]
+          </script>
+
+          <template>
+            <!-- app -> резервує простір у v-main; fixed top -->
+            <v-app-bar app flat elevation="1" color="white">
+              <div class="container head">
+                <div class="brand" @click="go('/')">Art Gallery</div>
+                <nav class="nav">
+                  <NuxtLink
+                    v-for="l in links"
+                    :key="l.to"
+                    :to="l.to"
+                    class="nav-link"
+                    :class="{ active: route.path === l.to || route.path.startsWith(l.to + '/') }"
+                  >{{ l.label }}</NuxtLink>
+                </nav>
+              </div>
+            </v-app-bar>
+          </template>
+
+          <style scoped>
+          .head{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            min-height:64px;
+          }
+          .brand{
+            font-weight:700;
+            letter-spacing:.2px;
+            cursor:pointer;
+          }
+          .nav{
+            display:flex; gap: 18px; align-items:center;
+          }
+          .nav-link{
+            text-decoration:none;
+            color: inherit;
+            opacity:.8;
+            padding: 6px 8px;
+            border-radius: 8px;
+          }
+          .nav-link:hover{ opacity:1; background: rgba(0,0,0,.04); }
+          .nav-link.active{ color: var(--brand); opacity:1; background: rgba(30,64,175,.08); }
+          </style>
+          VUE
+
+      # 4) layouts/default.vue — контейнер, margins, сірий фон на всю сторінку
+      - name: Write layouts/default.vue
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p layouts
+          cat > layouts/default.vue <<'VUE'
+          <script setup lang="ts">
+          </script>
+
+          <template>
+            <!-- УВАГА: v-app та v-main уже у app.vue (зафіксовано раніше).
+                 Тут — тільки контент лейауту під AppHeader. -->
+            <AppHeader />
+            <div class="container page-wrap">
+              <slot />
+            </div>
+            <AppFooter v-if="false" /> <!-- додасте пізніше; залишено місце -->
+          </template>
+
+          <style scoped>
+          .page-wrap{
+            padding-top: 18px;   /* невеликий відступ від хедера */
+            padding-bottom: 28px;
+          }
+          </style>
+          VUE
+
+      # 5) pages/index.vue — підхопити контейнер + рамку зображень із theme.css
+      - name: Patch pages/index.vue (wrap & image frame)
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="pages/index.vue"
+          if [ -f "$FILE" ]; then
+            # Додаємо .container на верхній блок, якщо його немає
+            if ! grep -q 'class="page container"' "$FILE"; then
+              sed -i 's/<div class="page">/<div class="page container">/' "$FILE"
+            fi
+            # Додаємо клас .img-frame до обгортки зображення героя
+            if grep -q 'class="imgWrap"' "$FILE"; then
+              sed -i 's/class="imgWrap"/class="imgWrap img-frame"/' "$FILE"
+            fi
+            # Підстрахуємо висоту героя (кореляція з --hero-h)
+            if ! grep -q '.hero-img' "$FILE"; then
+              cat >> "$FILE" <<'STYLE'
+
+          <style scoped>
+          .hero-img { max-height: var(--hero-h); }
+          </style>
+          STYLE
+            fi
+          else
+            echo "pages/index.vue not found; skipping this step."
+          fi
+
+      - name: Commit & push
+        run: |
+          git config user.name "gallery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin HEAD:${{ github.event.inputs.branch }}
