@@ -1,0 +1,156 @@
+name: Apply TASK-010 (About page + Header nav per spec)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to commit to"
+        required: true
+        default: "main"
+      commit_message:
+        description: "Commit message"
+        required: true
+        default: "TASK-010: add /about page and update AppHeader nav order/labels (Про нас, Виставки, Придбати квитки, Контакти)"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      # ---------- Update AppHeader (nav) ----------
+      - name: Update components/AppHeader.vue
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="components/AppHeader.vue"
+          mkdir -p components
+          if [ -f "$FILE" ]; then
+            # Замінити набір посилань у навігації згідно ТЗ
+            # Секція <nav class="nav"> ... </nav>
+            awk '
+              /<nav class="nav">/ {inNav=1; print; print "                  <NuxtLink :to=\"\\x27/about\\x27\" class=\"nav-link\" :class=\"{ active: isActive(\\x27/about\\x27) }\">Про нас</NuxtLink>"; print "                  <NuxtLink :to=\"\\x27/exhibitions\\x27\" class=\"nav-link\" :class=\"{ active: isActive(\\x27/exhibitions\\x27) }\">Виставки</NuxtLink>"; print "                  <NuxtLink :to=\"\\x27/tickets\\x27\" class=\"nav-link\" :class=\"{ active: isActive(\\x27/tickets\\x27) }\">Придбати квитки</NuxtLink>"; print "                  <NuxtLink :to=\"\\x27/contacts\\x27\" class=\"nav-link\" :class=\"{ active: isActive(\\x27/contacts\\x27) }\">Контакти</NuxtLink>"; next}
+              inNav && /<\/nav>/ {inNav=0}
+              !inNav {print}
+            ' "$FILE" > /tmp/AppHeader.vue.new
+            mv /tmp/AppHeader.vue.new "$FILE"
+
+            # Переконаємось, що клік по логотипу веде на головну
+            if ! grep -q "@click=\"go('/')" "$FILE"; then
+              sed -i "s/<div class=\"brand\"/<div class=\"brand\" @click=\"go('\\/')\"/" "$FILE"
+            fi
+          else
+            echo "components/AppHeader.vue not found; skipping header update."
+          fi
+
+      # ---------- Create About page ----------
+      - name: Write pages/about.vue
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pages
+          cat > pages/about.vue <<'VUE'
+          <script setup lang="ts">
+          definePageMeta({ layout: 'default' })
+          const goTickets = () => navigateTo('/tickets')
+          const goExhibitions = () => navigateTo('/exhibitions')
+          </script>
+
+          <template>
+            <div class="container about page">
+              <h1 class="title">Про нас</h1>
+
+              <div class="intro section">
+                <div class="text">
+                  <p>
+                    Art Gallery — це простір сучасного та класичного мистецтва, де тимчасові експозиції змінюють одна одну,
+                    а кожна виставка має власну історію. Ми працюємо з художниками, кураторами та спільнотою, щоби показувати
+                    найцікавіші події мистецького життя у доступному форматі.
+                  </p>
+                  <p class="muted">
+                    Наша місія — створювати місце зустрічі глядача й мистецтва: виставки, кураторські екскурсії, лекції,
+                    зустрічі з авторами та освітні програми.
+                  </p>
+                  <div class="cta">
+                    <v-btn color="primary" class="mr-2" @click="goExhibitions">Переглянути виставки</v-btn>
+                    <v-btn variant="tonal" @click="goTickets">Придбати квитки</v-btn>
+                  </div>
+                </div>
+                <div class="image img-frame">
+                  <v-img
+                    src="/images/about/space.jpg"
+                    alt="Виставковий простір"
+                    height="360"
+                    contain
+                  />
+                </div>
+              </div>
+
+              <div class="grid section">
+                <v-card class="pa-4">
+                  <h2 class="h">Години роботи</h2>
+                  <p>Вт–Нд: 11:00–19:00</p>
+                  <p>Пн: вихідний</p>
+                </v-card>
+
+                <v-card class="pa-4">
+                  <h2 class="h">Адреса</h2>
+                  <p>вул. Прикладна, 10, Львів</p>
+                  <p class="muted">Вхід з внутрішнього двору</p>
+                </v-card>
+
+                <v-card class="pa-4">
+                  <h2 class="h">Події</h2>
+                  <p>Екскурсії щосуботи, авторські зустрічі — щомісяця.</p>
+                </v-card>
+              </div>
+
+              <div class="section">
+                <v-alert type="info" variant="tonal">
+                  Для групових відвідувань або освіти напишіть у розділі <NuxtLink to="/contacts">Контакти</NuxtLink>.
+                </v-alert>
+              </div>
+            </div>
+          </template>
+
+          <style scoped>
+          .page { padding-top: 18px; padding-bottom: 28px; }
+          .title { font-size: clamp(32px, 4vw, 48px); margin-bottom: 12px; }
+          .intro {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 24px;
+            align-items: center;
+          }
+          .cta { margin-top: 8px; }
+          .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+          }
+          .h { font-size: 18px; margin-bottom: 6px; }
+          .image :deep(img) { object-fit: contain; }
+          @media (max-width: 1100px) {
+            .intro { grid-template-columns: 1fr; }
+            .grid { grid-template-columns: 1fr; }
+          }
+          </style>
+          VUE
+
+      - name: Commit & push
+        run: |
+          git config user.name "gallery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin HEAD:${{ github.event.inputs.branch }}

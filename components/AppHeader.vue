@@ -38,14 +38,10 @@ const go = (p: string) => navigateTo(p)
       <div class="brand" @click="go('/')">Art Gallery</div>
 
       <nav class="nav">
-        <!-- Навігація згідно зразка -->
-        <NuxtLink :to="'/'" class="nav-link" :class="{ active: isActive('/') }">Головна</NuxtLink>
-        <NuxtLink :to="'/exhibitions/current'"  class="nav-link" :class="{ active: isActive('/exhibitions/current') }">Поточна</NuxtLink>
-        <NuxtLink :to="'/exhibitions/past'"     class="nav-link" :class="{ active: isActive('/exhibitions/past') }">Минулі</NuxtLink>
-        <NuxtLink :to="'/exhibitions/upcoming'" class="nav-link" :class="{ active: isActive('/exhibitions/upcoming') }">Майбутні</NuxtLink>
-        <NuxtLink :to="'/artists'"  class="nav-link" :class="{ active: isActive('/artists') }">Художники</NuxtLink>
-        <NuxtLink :to="'/tickets'"  class="nav-link" :class="{ active: isActive('/tickets') }">Квитки</NuxtLink>
-        <NuxtLink :to="'/contacts'" class="nav-link" :class="{ active: isActive('/contacts') }">Контакти</NuxtLink>
+                  <NuxtLink :to="\x27/about\x27" class="nav-link" :class="{ active: isActive(\x27/about\x27) }">Про нас</NuxtLink>
+                  <NuxtLink :to="\x27/exhibitions\x27" class="nav-link" :class="{ active: isActive(\x27/exhibitions\x27) }">Виставки</NuxtLink>
+                  <NuxtLink :to="\x27/tickets\x27" class="nav-link" :class="{ active: isActive(\x27/tickets\x27) }">Придбати квитки</NuxtLink>
+                  <NuxtLink :to="\x27/contacts\x27" class="nav-link" :class="{ active: isActive(\x27/contacts\x27) }">Контакти</NuxtLink>
       </nav>
 
       <!-- Праворуч: логін/кабінет -->

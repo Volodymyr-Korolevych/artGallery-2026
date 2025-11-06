@@ -1,0 +1,97 @@
+name: Apply FONT-PATCH (Cormorant Garamond + Inter combo)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch"
+        required: true
+        default: "main"
+      commit_message:
+        description: "Message"
+        required: true
+        default: "FONT-PATCH: switch headings to Cormorant Garamond, body to Inter; update CSS"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Update theme.css
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/styles
+          cat > assets/styles/theme.css <<'CSS'
+          @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap&subset=cyrillic');
+
+          :root{
+            --bg-page: #f7f7f8;
+            --fg-text: #0b0b0c;
+            --fg-muted: rgba(0,0,0,.65);
+            --brand: #1e40af;
+            --border-soft: rgba(0,0,0,.08);
+            --container-max: 1200px;
+            --container-pad: 20px;
+          }
+
+          html, body{
+            background: var(--bg-page);
+            color: var(--fg-text);
+            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            font-size:16px;
+          }
+
+          .container{
+            max-width: var(--container-max);
+            margin: 0 auto;
+            padding-left: var(--container-pad);
+            padding-right: var(--container-pad);
+          }
+
+          h1, h2, h3, h4{
+            font-family: "Cormorant Garamond", serif;
+            font-weight:600;
+            letter-spacing: .5px;
+          }
+
+          .img-frame{
+            border:1px solid var(--border-soft);
+            border-radius:12px;
+            background:#fff;
+            overflow:hidden;
+          }
+          CSS
+
+      - name: Ensure CSS imported in nuxt.config.ts
+        run: |
+          set -euo pipefail
+          CONFIG="nuxt.config.ts"
+          if [ -f "$CONFIG" ]; then
+            if ! grep -q "assets/styles/theme.css" "$CONFIG"; then
+              if grep -q "css:" "$CONFIG"; then
+                sed -i '0,/css: \[/s//css: [\n    '\''@\/assets\/styles\/theme.css'\'',/' "$CONFIG"
+              else
+                sed -i '0,/export default defineNuxtConfig({/s//export default defineNuxtConfig({\n  css: ['\''@\/assets\/styles\/theme.css'\''],/' "$CONFIG"
+              fi
+            fi
+          fi
+
+      - name: Commit & push
+        run: |
+          git config user.name "gallery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin HEAD:${{ github.event.inputs.branch }}
