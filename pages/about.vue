@@ -26,7 +26,7 @@ const goExhibitions = () => navigateTo('/exhibitions')
       </div>
       <div class="image img-frame">
         <v-img
-          src="/images/about/space.jpg"
+          src="/img/about.png"
           alt="Виставковий простір"
           height="360"
           contain
