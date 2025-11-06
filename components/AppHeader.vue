@@ -32,19 +32,22 @@ const go = (p: string) => navigateTo(p)
 </script>
 
 <template>
-  <!-- Білий хедер поверх сірого фону сторінки; фіксований, із контейнером -->
   <v-app-bar app flat elevation="1" color="white" density="comfortable">
     <div class="container head">
-      <div class="brand" @click="go('/')">Art Gallery</div>
+      <!-- ЛОГО → Головна -->
+      <div class="brand" @click="go('/')">
+        Art Gallery
+      </div>
 
+      <!-- Головне меню згідно ТЗ -->
       <nav class="nav">
-                  <NuxtLink :to="\x27/about\x27" class="nav-link" :class="{ active: isActive(\x27/about\x27) }">Про нас</NuxtLink>
-                  <NuxtLink :to="\x27/exhibitions\x27" class="nav-link" :class="{ active: isActive(\x27/exhibitions\x27) }">Виставки</NuxtLink>
-                  <NuxtLink :to="\x27/tickets\x27" class="nav-link" :class="{ active: isActive(\x27/tickets\x27) }">Придбати квитки</NuxtLink>
-                  <NuxtLink :to="\x27/contacts\x27" class="nav-link" :class="{ active: isActive(\x27/contacts\x27) }">Контакти</NuxtLink>
+        <NuxtLink to="/about"       class="nav-link" :class="{ active: isActive('/about') }">Про нас</NuxtLink>
+        <NuxtLink to="/exhibitions" class="nav-link" :class="{ active: isActive('/exhibitions') }">Виставки</NuxtLink>
+        <NuxtLink to="/tickets"     class="nav-link" :class="{ active: isActive('/tickets') }">Придбати квитки</NuxtLink>
+        <NuxtLink to="/contacts"    class="nav-link" :class="{ active: isActive('/contacts') }">Контакти</NuxtLink>
       </nav>
 
-      <!-- Праворуч: логін/кабінет -->
+      <!-- Логін / Кабінет -->
       <div class="auth">
         <template v-if="!user">
           <v-btn color="secondary" to="/login">Увійти</v-btn>
@@ -68,35 +71,42 @@ const go = (p: string) => navigateTo(p)
 </template>
 
 <style scoped>
-.head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  min-height:64px;
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 16px;
+  min-height: 64px;
 }
-.brand{
-  font-weight:700;
-  letter-spacing:.2px;
-  cursor:pointer;
+.brand {
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .2px;
 }
-.nav{
-  display:flex;
+.nav {
+  display: flex;
   gap: 16px;
-  align-items:center;
+  align-items: center;
   flex-wrap: wrap;
 }
-.nav-link{
-  text-decoration:none;
-  color: inherit;
-  opacity:.85;
+.nav-link {
   padding: 6px 10px;
   border-radius: 8px;
+  text-decoration: none;
+  opacity: .85;
+  color: inherit;
 }
-.nav-link:hover{ opacity:1; background: rgba(0,0,0,.04); }
-.nav-link.active{ color: var(--brand); opacity:1; background: rgba(30,64,175,.08); }
-
-.auth{
-  display:flex; align-items:center;
+.nav-link:hover {
+  opacity: 1;
+  background: rgba(0,0,0,.05);
+}
+.nav-link.active {
+  opacity: 1;
+  background: rgba(30,64,175,.10);
+  color: var(--brand);
+}
+.auth {
+  display: flex;
+  align-items: center;
 }
 </style>
