@@ -146,26 +146,7 @@ jobs:
           </style>
           VUE
 
-      # ✅ додаємо сторінку /about (якщо ще нема)
-      - name: Ensure pages/about.vue
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p pages
-          if [ ! -f pages/about.vue ]; then
-            cat > pages/about.vue <<'VUE'
-            <script setup lang="ts">
-            definePageMeta({ layout: 'default' })
-            </script>
-
-            <template>
-              <div class="container page">
-                <h1>Про нас</h1>
-                <p>Тут буде опис галереї згідно ТЗ.</p>
-              </div>
-            </template>
-            VUE
-          fi
+ 
 
       - name: Commit & push
         run: |
