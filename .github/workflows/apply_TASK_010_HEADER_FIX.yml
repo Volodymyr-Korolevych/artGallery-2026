@@ -31,7 +31,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p components
-          cat > components/AppHeader.vue <<'VUE'
+          cat > components/AppHeader.vue << 'VUE'
           <script setup lang="ts">
           const route = useRoute()
           const user = useSupabaseUser()
