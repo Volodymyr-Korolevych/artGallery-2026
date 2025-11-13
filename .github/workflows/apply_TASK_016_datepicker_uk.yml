@@ -1,0 +1,178 @@
+name: Apply TASK-016 (vue-datepicker uk locale on admin exhibition forms)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to commit to"
+        required: true
+        default: "main"
+      commit_message:
+        description: "Message"
+        required: true
+        default: "TASK-016: replace Vuetify date inputs with @vuepic/vue-datepicker (uk, dd.MM.yyyy) in admin exhibitions forms"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      # 1) Add dependency to package.json (no install here; you will npm i locally/Vercel will)
+      - name: Ensure @vuepic/vue-datepicker in package.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package.json ]; then
+            node - <<'NODE'
+            const fs=require('fs');
+            const p=JSON.parse(fs.readFileSync('package.json','utf8'));
+            p.dependencies = p.dependencies || {};
+            if(!p.dependencies['@vuepic/vue-datepicker']) {
+              p.dependencies['@vuepic/vue-datepicker'] = '^7.4.0';
+            }
+            fs.writeFileSync('package.json', JSON.stringify(p,null,2));
+            NODE
+          fi
+
+      # 2) Patch pages/admin/exhibitions/new.vue
+      - name: Patch admin new.vue to use vue-datepicker (uk)
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="pages/admin/exhibitions/new.vue"
+          if [ -f "$FILE" ]; then
+            # Replace any v-date-input usage by a Datepicker block; or insert if absent
+            # We rewrite the date block safely and add imports + refs + save mapping.
+            awk 'BEGIN{skip=0} /<script setup/ { print; print "import Datepicker from \x22@vuepic/vue-datepicker\x22"; print "import \x22@vuepic/vue-datepicker/dist/main.css\x22"; print "import { uk } from \x22date-fns/locale\x22"; next } { print }' "$FILE" > /tmp/new.vue.step1
+
+            # Insert local state for date objects and helpers if not present
+            if ! grep -q "const startDateLocal" /tmp/new.vue.step1; then
+              awk '
+                /onMounted\(/ && added==0 {print; next}
+                /<\/script>/ && added==0 {
+                  print "const startDateLocal = ref<Date|null>(null)"
+                  print "const endDateLocal   = ref<Date|null>(null)"
+                  print ""
+                  print "const toYMD = (d: Date|null) => d ? new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString().slice(0,10) : null"
+                  print "const fromYMD = (s: string|null) => {"
+                  print "  if(!s) return null;"
+                  print "  const [y,m,da] = s.split(\x27-\x27).map(Number);"
+                  print "  return new Date(y, (m||1)-1, da||1)"
+                  print "}"
+                  print ""
+                  print "onMounted(()=>{"
+                  print "  // якщо є тимчасова модель форми (exForm?) — синхронізуємо у випадку редагування"
+                  print "  // на /new буде просто null"
+                  print "  // тут припускаємо, що у тебе є реактивні поля form.startDate/form.endDate (string|null)"
+                  print "  // якщо інакше — не проблема: головне, щоб у save() ми брали toYMD()"
+                  print "  if ((form as any)?.startDate) startDateLocal.value = fromYMD((form as any).startDate)"
+                  print "  if ((form as any)?.endDate)   endDateLocal.value   = fromYMD((form as any).endDate)"
+                  print "})"
+                  print ""
+                  added=1
+                }
+                { print }
+              ' /tmp/new.vue.step1 > /tmp/new.vue.step2
+            else
+              cp /tmp/new.vue.step1 /tmp/new.vue.step2
+            fi
+
+            # Ensure save() maps Date -> YMD strings
+            if grep -q "async function save" /tmp/new.vue.step2; then
+              sed -i '0,/async function save[^\{]*\{/{:a;N;/\}/{b};ba}; s/\(\<async function save[^{]*{\)/\1\n  (form as any).startDate = toYMD(startDateLocal.value);\n  (form as any).endDate   = toYMD(endDateLocal.value);\n/' /tmp/new.vue.step2
+            fi
+
+            # Replace any Vuetify date inputs in template with Datepicker fields.
+            # We attempt a generic injection before the closing of the form main container.
+            if grep -q "v-date-input" /tmp/new.vue.step2; then
+              sed -i 's#<v-date-input[^>]*name="startDate"[^>]*/>#<Datepicker v-model="startDateLocal" :locale="uk" format="dd.MM.yyyy" :enable-time-picker="false" :clearable="true" placeholder="Дата початку" />#g' /tmp/new.vue.step2
+              sed -i 's#<v-date-input[^>]*name="endDate"[^>]*/>#<Datepicker v-model="endDateLocal" :locale="uk" format="dd.MM.yyyy" :enable-time-picker="false" :clearable="true" placeholder="Дата завершення" />#g' /tmp/new.vue.step2
+            else
+              # If no v-date-input markers, try to insert under a known fields wrapper
+              sed -i '0,/<\/template>/{s#<\/template>#  <div class="dp-grid">\n    <Datepicker v-model="startDateLocal" :locale="uk" format="dd.MM.yyyy" :enable-time-picker="false" :clearable="true" placeholder="Дата початку" />\n    <Datepicker v-model="endDateLocal"   :locale="uk" format="dd.MM.yyyy" :enable-time-picker="false" :clearable="true" placeholder="Дата завершення" />\n  </div>\n</template>#}' /tmp/new.vue.step2
+            fi
+
+            # Add small scoped style for spacing if not present
+            if ! grep -q ".dp-grid" /tmp/new.vue.step2; then
+              sed -i '0,/<\/style>/{s#<\/style>#.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}@media(max-width:800px){.dp-grid{grid-template-columns:1fr}} \n</style>#}' /tmp/new.vue.step2 || true
+            fi
+
+            mv /tmp/new.vue.step2 "$FILE"
+          else
+            echo "pages/admin/exhibitions/new.vue not found (skipping)"
+          fi
+
+      # 3) Patch pages/admin/exhibitions/[id].vue
+      - name: Patch admin [id].vue to use vue-datepicker (uk)
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="pages/admin/exhibitions/[id].vue"
+          if [ -f "$FILE" ]; then
+            awk 'BEGIN{skip=0} /<script setup/ { print; print "import Datepicker from \x22@vuepic/vue-datepicker\x22"; print "import \x22@vuepic/vue-datepicker/dist/main.css\x22"; print "import { uk } from \x22date-fns/locale\x22"; next } { print }' "$FILE" > /tmp/id.vue.step1
+
+            if ! grep -q "const startDateLocal" /tmp/id.vue.step1; then
+              awk '
+                /onMounted\(/ && added==0 {print; next}
+                /<\/script>/ && added==0 {
+                  print "const startDateLocal = ref<Date|null>(null)"
+                  print "const endDateLocal   = ref<Date|null>(null)"
+                  print ""
+                  print "const toYMD = (d: Date|null) => d ? new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString().slice(0,10) : null"
+                  print "const fromYMD = (s: string|null) => {"
+                  print "  if(!s) return null;"
+                  print "  const [y,m,da] = s.split(\x27-\x27).map(Number);"
+                  print "  return new Date(y, (m||1)-1, da||1)"
+                  print "}"
+                  print ""
+                  print "onMounted(()=>{"
+                  print "  if ((form as any)?.startDate) startDateLocal.value = fromYMD((form as any).startDate)"
+                  print "  if ((form as any)?.endDate)   endDateLocal.value   = fromYMD((form as any).endDate)"
+                  print "})"
+                  print ""
+                  added=1
+                }
+                { print }
+              ' /tmp/id.vue.step1 > /tmp/id.vue.step2
+            else
+              cp /tmp/id.vue.step1 /tmp/id.vue.step2
+            fi
+
+            if grep -q "async function save" /tmp/id.vue.step2; then
+              sed -i '0,/async function save[^\{]*\{/{:a;N;/\}/{b};ba}; s/\(\<async function save[^{]*{\)/\1\n  (form as any).startDate = toYMD(startDateLocal.value);\n  (form as any).endDate   = toYMD(endDateLocal.value);\n/' /tmp/id.vue.step2
+            fi
+
+            if grep -q "v-date-input" /tmp/id.vue.step2; then
+              sed -i 's#<v-date-input[^>]*name="startDate"[^>]*/>#<Datepicker v-model="startDateLocal" :locale="uk" format="dd.MM.yyyy" :enable-time-picker="false" :clearable="true" placeholder="Дата початку" />#g' /tmp/id.vue.step2
+              sed -i 's#<v-date-input[^>]*name="endDate"[^>]*/>#<Datepicker v-model="endDateLocal" :locale="uk" format="dd.MM.yyyy" :enable-time-picker="false" :clearable="true" placeholder="Дата завершення" />#g' /tmp/id.vue.step2
+            else
+              sed -i '0,/<\/template>/{s#<\/template>#  <div class="dp-grid">\n    <Datepicker v-model="startDateLocal" :locale="uk" format="dd.MM.yyyy" :enable-time-picker="false" :clearable="true" placeholder="Дата початку" />\n    <Datepicker v-model="endDateLocal"   :locale="uk" format="dd.MM.yyyy" :enable-time-picker="false" :clearable="true" placeholder="Дата завершення" />\n  </div>\n</template>#}' /tmp/id.vue.step2
+            fi
+
+            if ! grep -q ".dp-grid" /tmp/id.vue.step2; then
+              sed -i '0,/<\/style>/{s#<\/style>#.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}@media(max-width:800px){.dp-grid{grid-template-columns:1fr}} \n</style>#}' /tmp/id.vue.step2 || true
+            fi
+
+            mv /tmp/id.vue.step2 "$FILE"
+          else
+            echo "pages/admin/exhibitions/[id].vue not found (skipping)"
+          fi
+
+      - name: Commit & push
+        run: |
+          git config user.name "gallery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin HEAD:${{ github.event.inputs.branch }}
