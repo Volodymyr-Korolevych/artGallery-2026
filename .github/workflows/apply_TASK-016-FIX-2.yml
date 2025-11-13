@@ -1,0 +1,329 @@
+name: Apply TASK-016-FIX-2 (datepicker integration fix)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch"
+        required: true
+        default: "main"
+      commit_message:
+        description: "Message"
+        required: true
+        default: "TASK-016-FIX-2: integrate @vuepic/vue-datepicker (uk locale) into admin exhibitions forms"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      # Додати залежності у package.json
+      - name: Add deps (@vuepic/vue-datepicker, date-fns)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f package.json ]; then
+            echo '{}' > package.json
+            npm pkg set name="artgallery-2026"
+            npm pkg set private=true
+          fi
+          npm pkg set dependencies.@vuepic/vue-datepicker="^9.0.2"
+          npm pkg set dependencies.date-fns="^3.6.0"
+
+      # Додати CSS від календаря у nuxt.config.ts
+      - name: Ensure DatePicker CSS in nuxt.config.ts
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f nuxt.config.ts ]; then
+            if ! grep -q "@vuepic/vue-datepicker/dist/main.css" nuxt.config.ts; then
+              cat > /tmp/inject-css.js <<'JS'
+const fs = require('fs');
+const p = 'nuxt.config.ts';
+let s = fs.readFileSync(p, 'utf8');
+const cssEntry = "'@vuepic/vue-datepicker/dist/main.css'";
+const cssBlockRegex = /css:\s*\[([\s\S]*?)\]/m;
+if (cssBlockRegex.test(s)) {
+  if (!s.includes(cssEntry)) {
+    s = s.replace(cssBlockRegex, (m, inside) => {
+      const body = inside.trim();
+      const prefix = body.length ? body + ',\n    ' : '';
+      return `css: [\n    ${prefix}${cssEntry}\n  ]`;
+    });
+  }
+} else {
+  s = s.replace(/export default defineNuxtConfig\(\{\s*/m, (m) => {
+    return m + `  css: [\n    ${cssEntry}\n  ],\n`;
+  });
+}
+fs.writeFileSync(p, s);
+JS
+              node /tmp/inject-css.js
+            fi
+          fi
+
+      # Переписати сторінку створення виставки
+      - name: Write pages/admin/exhibitions/new.vue
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pages/admin/exhibitions
+          cat > pages/admin/exhibitions/new.vue <<'VUE'
+<template>
+  <div class="p-6 space-y-6">
+    <div class="grid gap-4 md:grid-cols-2">
+      <div>
+        <label class="block mb-2 text-sm font-medium">Назва виставки</label>
+        <input v-model="title" type="text" class="w-full border rounded px-3 py-2" placeholder="Наприклад: «Тіні та Світло»" />
+      </div>
+      <div>
+        <label class="block mb-2 text-sm font-medium">Slug</label>
+        <input v-model="slug" type="text" class="w-full border rounded px-3 py-2" placeholder="naprklad-tini-ta-svitlo" />
+      </div>
+    </div>
+
+    <div>
+      <label class="block mb-2 text-sm font-medium">Опис</label>
+      <textarea v-model="description" rows="5" class="w-full border rounded px-3 py-2" placeholder="Короткий опис виставки..."></textarea>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <div>
+        <label class="block mb-2 text-sm font-medium">Художник (ID)</label>
+        <input v-model.number="painterId" type="number" min="1" class="w-full border rounded px-3 py-2" placeholder="ID художника" />
+      </div>
+      <div>
+        <label class="block mb-2 text-sm font-medium">Обкладинка (URL)</label>
+        <input v-model="coverUrl" type="url" class="w-full border rounded px-3 py-2" placeholder="https://..." />
+      </div>
+    </div>
+
+    <div>
+      <label class="block mb-2 text-sm font-medium">Зображення картки (URL)</label>
+      <input v-model="cardUrl" type="url" class="w-full border rounded px-3 py-2" placeholder="https://..." />
+    </div>
+
+    <ClientOnly>
+      <div>
+        <label class="block mb-2 text-sm font-medium">Період виставки</label>
+        <VueDatePicker
+          v-model="period"
+          :locale="uk"
+          range
+          :week-start="1"
+          :enable-time-picker="false"
+          auto-apply
+          format="dd.MM.yyyy"
+          placeholder="Оберіть період (з — по)"
+        />
+      </div>
+    </ClientOnly>
+
+    <div class="pt-4">
+      <button
+        :disabled="!isValid"
+        class="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
+        @click="submit"
+      >
+        Зберегти виставку
+      </button>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import VueDatePicker from '@vuepic/vue-datepicker'
+import { uk } from 'date-fns/locale'
+import { format } from 'date-fns'
+
+const title = ref('')
+const slug = ref('')
+const description = ref('')
+const painterId = ref<number | null>(null)
+const coverUrl = ref('')
+const cardUrl = ref('')
+
+// Діапазон дат
+const period = ref<[Date | null, Date | null]>([null, null])
+
+const toYMD = (d: Date | null) => (d ? format(d, 'yyyy-MM-dd') : null)
+const startDate = computed(() => toYMD(period.value?.[0] ?? null))
+const endDate   = computed(() => toYMD(period.value?.[1] ?? null))
+
+const isValid = computed(() =>
+  !!title.value.trim() &&
+  !!startDate.value &&
+  !!endDate.value &&
+  !!painterId.value
+)
+
+const submit = async () => {
+  if (!isValid.value) return
+  const payload = {
+    title: title.value,
+    slug: slug.value,
+    description: description.value,
+    startDate: startDate.value,
+    endDate: endDate.value,
+    painterId: painterId.value,
+    coverUrl: coverUrl.value,
+    cardUrl: cardUrl.value,
+    isPublished: true
+  }
+  // TODO: замінити на реальний запит до API
+  console.log('Submit payload', payload)
+}
+</script>
+VUE
+
+      # Переписати сторінку редагування виставки
+      - name: Write pages/admin/exhibitions/[id].vue
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "pages/admin/exhibitions/[id].vue" <<'VUE'
+<template>
+  <div class="p-6 space-y-6">
+    <div class="grid gap-4 md:grid-cols-2">
+      <div>
+        <label class="block mb-2 text-sm font-medium">Назва виставки</label>
+        <input v-model="title" type="text" class="w-full border rounded px-3 py-2" />
+      </div>
+      <div>
+        <label class="block mb-2 text-sm font-medium">Slug</label>
+        <input v-model="slug" type="text" class="w-full border rounded px-3 py-2" />
+      </div>
+    </div>
+
+    <div>
+      <label class="block mb-2 text-sm font-medium">Опис</label>
+      <textarea v-model="description" rows="5" class="w-full border rounded px-3 py-2"></textarea>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <div>
+        <label class="block mb-2 text-sm font-medium">Художник (ID)</label>
+        <input v-model.number="painterId" type="number" min="1" class="w-full border rounded px-3 py-2" />
+      </div>
+      <div>
+        <label class="block mb-2 text-sm font-medium">Обкладинка (URL)</label>
+        <input v-model="coverUrl" type="url" class="w-full border rounded px-3 py-2" />
+      </div>
+    </div>
+
+    <div>
+      <label class="block mb-2 text-sm font-medium">Зображення картки (URL)</label>
+      <input v-model="cardUrl" type="url" class="w-full border rounded px-3 py-2" />
+    </div>
+
+    <ClientOnly>
+      <div>
+        <label class="block mb-2 text-sm font-medium">Період виставки</label>
+        <VueDatePicker
+          v-model="period"
+          :locale="uk"
+          range
+          :week-start="1"
+          :enable-time-picker="false"
+          auto-apply
+          format="dd.MM.yyyy"
+          placeholder="Оберіть період (з — по)"
+        />
+      </div>
+    </ClientOnly>
+
+    <div class="pt-4">
+      <button
+        :disabled="!isValid"
+        class="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
+        @click="update"
+      >
+        Оновити виставку
+      </button>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import VueDatePicker from '@vuepic/vue-datepicker'
+import { uk } from 'date-fns/locale'
+import { parseISO, format } from 'date-fns'
+const route = useRoute()
+
+const title = ref('')
+const slug = ref('')
+const description = ref('')
+const painterId = ref<number | null>(null)
+const coverUrl = ref('')
+const cardUrl = ref('')
+
+// Діапазон дат
+const period = ref<[Date | null, Date | null]>([null, null])
+
+const toYMD = (d: Date | null) => (d ? format(d, 'yyyy-MM-dd') : null)
+const startDate = computed(() => toYMD(period.value?.[0] ?? null))
+const endDate   = computed(() => toYMD(period.value?.[1] ?? null))
+
+const isValid = computed(() =>
+  !!title.value.trim() &&
+  !!startDate.value &&
+  !!endDate.value &&
+  !!painterId.value
+)
+
+onMounted(async () => {
+  // TODO: завантажте дані виставки за ID
+  const item: any = null
+  if (item) {
+    title.value = item.title ?? ''
+    slug.value = item.slug ?? ''
+    description.value = item.description ?? ''
+    painterId.value = item.painterId ?? null
+    coverUrl.value = item.coverUrl ?? ''
+    cardUrl.value = item.cardUrl ?? ''
+    period.value = [
+      item.startDate ? parseISO(item.startDate) : null,
+      item.endDate ? parseISO(item.endDate) : null
+    ]
+  }
+})
+
+const update = async () => {
+  if (!isValid.value) return
+  const payload = {
+    title: title.value,
+    slug: slug.value,
+    description: description.value,
+    startDate: startDate.value,
+    endDate: endDate.value,
+    painterId: painterId.value,
+    coverUrl: coverUrl.value,
+    cardUrl: cardUrl.value
+  }
+  // TODO: замінити на реальний запит до API
+  console.log('Update payload', payload)
+}
+</script>
+VUE
+
+      # Зафіксувати та запушити зміни
+      - name: Commit & push
+        run: |
+          git config user.name "gallery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin HEAD:${{ github.event.inputs.branch }}"
