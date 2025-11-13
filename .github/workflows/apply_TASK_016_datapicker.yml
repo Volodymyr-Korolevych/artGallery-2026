@@ -1,7 +1,7 @@
-name: APPLY TASK 016 — Datepicker integration (uk)
+name: APPLY TASK 016 - Datepicker integration (uk)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 jobs:
   apply-task-016:
@@ -16,14 +16,13 @@ jobs:
       - name: Use Node 20
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
-      - name: Create working branch name
-        id: branch
-        run: |
-          echo "BRANCH=task-016-datepicker" >> $GITHUB_ENV
+      - name: Set working branch env
+        run: echo "BRANCH=task-016-datepicker" >> "$GITHUB_ENV"
 
       - name: Add dependencies (@vuepic/vue-datepicker, date-fns)
+        shell: bash
         run: |
           if [ -f package.json ]; then
             npm pkg set dependencies.@vuepic/vue-datepicker="^9.0.2"
@@ -39,23 +38,24 @@ jobs:
           fi
 
       - name: Ensure Vue DatePicker CSS in nuxt.config.ts
+        shell: bash
         run: |
           if [ -f nuxt.config.ts ]; then
             if ! grep -q "@vuepic/vue-datepicker/dist/main.css" nuxt.config.ts; then
               node - <<'NODE'
               const fs = require('fs');
               const p = 'nuxt.config.ts';
+              if (!fs.existsSync(p)) process.exit(0);
               let s = fs.readFileSync(p, 'utf8');
-
               const cssEntry = "'@vuepic/vue-datepicker/dist/main.css'";
               const cssBlockRegex = /css:\s*\[([\s\S]*?)\]/m;
+
               if (cssBlockRegex.test(s)) {
                 if (!s.includes(cssEntry)) {
                   s = s.replace(cssBlockRegex, (m, inside) => {
-                    const trimmed = inside.trim();
-                    const hasTrailingComma = /,\s*$/.test(trimmed);
-                    const injected = trimmed.length ? trimmed + (hasTrailingComma ? '' : ',') + `\n    ${cssEntry},\n  ` : `\n    ${cssEntry}\n  `;
-                    return `css: [\n  ${injected}]`;
+                    const body = inside.trim();
+                    const sep = body.length ? ',\n    ' : '';
+                    return `css: [\n    ${body}${sep}${cssEntry}\n  ]`;
                   });
                 }
               } else {
@@ -63,7 +63,6 @@ jobs:
                   return m + `  css: [\n    ${cssEntry}\n  ],\n`;
                 });
               }
-
               fs.writeFileSync(p, s);
               NODE
             fi
@@ -72,18 +71,17 @@ jobs:
           fi
 
       - name: Write pages/admin/exhibitions/new.vue
+        shell: bash
         run: |
           mkdir -p pages/admin/exhibitions
           cat > pages/admin/exhibitions/new.vue <<'VUE'
 <template>
   <div class="p-6 space-y-6">
-    <!-- Інші текстові поля форми (приклад, замініть своїми компонентами) -->
     <div class="grid gap-4 md:grid-cols-2">
       <div>
         <label class="block mb-2 text-sm font-medium">Назва виставки</label>
         <input v-model="title" type="text" class="w-full border rounded px-3 py-2" placeholder="Наприклад: «Тіні та Світло»" />
       </div>
-
       <div>
         <label class="block mb-2 text-sm font-medium">Slug</label>
         <input v-model="slug" type="text" class="w-full border rounded px-3 py-2" placeholder="naprklad-tini-ta-svitlo" />
@@ -100,7 +98,6 @@ jobs:
         <label class="block mb-2 text-sm font-medium">Художник (ID)</label>
         <input v-model.number="painterId" type="number" min="1" class="w-full border rounded px-3 py-2" placeholder="ID художника" />
       </div>
-
       <div>
         <label class="block mb-2 text-sm font-medium">Обкладинка (URL)</label>
         <input v-model="coverUrl" type="url" class="w-full border rounded px-3 py-2" placeholder="https://..." />
@@ -153,12 +150,9 @@ const painterId = ref<number | null>(null)
 const coverUrl = ref('')
 const cardUrl = ref('')
 
-// Діапазон дат для календаря
 const period = ref<[Date | null, Date | null]>([null, null])
 
-// Перетворення до рядка 'YYYY-MM-DD' (без часу/зони)
 const toYMD = (d: Date | null) => (d ? format(d, 'yyyy-MM-dd') : null)
-
 const startDate = computed(() => toYMD(period.value?.[0] ?? null))
 const endDate   = computed(() => toYMD(period.value?.[1] ?? null))
 
@@ -175,32 +169,29 @@ const submit = async () => {
     title: title.value,
     slug: slug.value,
     description: description.value,
-    startDate: startDate.value, // 'YYYY-MM-DD'
-    endDate: endDate.value,     // 'YYYY-MM-DD'
+    startDate: startDate.value,
+    endDate: endDate.value,
     painterId: painterId.value,
     coverUrl: coverUrl.value,
     cardUrl: cardUrl.value,
     isPublished: true
   }
-  // TODO: замініть на вашу реальну інтеграцію (наприклад, $fetch до API/Supabase)
-  // await $fetch('/api/exhibitions', { method: 'POST', body: payload })
   console.log('Submit payload', payload)
 }
 </script>
 VUE
 
       - name: Write pages/admin/exhibitions/[id].vue
+        shell: bash
         run: |
           cat > "pages/admin/exhibitions/[id].vue" <<'VUE'
 <template>
   <div class="p-6 space-y-6">
-    <!-- Інші поля -->
     <div class="grid gap-4 md:grid-cols-2">
       <div>
         <label class="block mb-2 text-sm font-medium">Назва виставки</label>
         <input v-model="title" type="text" class="w-full border rounded px-3 py-2" />
       </div>
-
       <div>
         <label class="block mb-2 text-sm font-medium">Slug</label>
         <input v-model="slug" type="text" class="w-full border rounded px-3 py-2" />
@@ -217,7 +208,6 @@ VUE
         <label class="block mb-2 text-sm font-medium">Художник (ID)</label>
         <input v-model.number="painterId" type="number" min="1" class="w-full border rounded px-3 py-2" />
       </div>
-
       <div>
         <label class="block mb-2 text-sm font-medium">Обкладинка (URL)</label>
         <input v-model="coverUrl" type="url" class="w-full border rounded px-3 py-2" />
@@ -271,7 +261,6 @@ const painterId = ref<number | null>(null)
 const coverUrl = ref('')
 const cardUrl = ref('')
 
-// Діапазон дат для календаря
 const period = ref<[Date | null, Date | null]>([null, null])
 
 const toYMD = (d: Date | null) => (d ? format(d, 'yyyy-MM-dd') : null)
@@ -286,8 +275,7 @@ const isValid = computed(() =>
 )
 
 onMounted(async () => {
-  // TODO: замініть на реальне завантаження
-  // const item = await $fetch(`/api/exhibitions/${route.params.id}`)
+  // TODO: завантажити реальні дані
   const item: any = null
   if (item) {
     title.value = item.title ?? ''
@@ -309,14 +297,12 @@ const update = async () => {
     title: title.value,
     slug: slug.value,
     description: description.value,
-    startDate: startDate.value, // 'YYYY-MM-DD'
-    endDate: endDate.value,     // 'YYYY-MM-DD'
+    startDate: startDate.value,
+    endDate: endDate.value,
     painterId: painterId.value,
     coverUrl: coverUrl.value,
     cardUrl: cardUrl.value
   }
-  // TODO: замініть на вашу інтеграцію
-  // await $fetch(`/api/exhibitions/${route.params.id}`, { method: 'PUT', body: payload })
   console.log('Update payload', payload)
 }
 </script>
@@ -342,8 +328,6 @@ VUE
             - Переписано повні файли:
               - `pages/admin/exhibitions/new.vue`
               - `pages/admin/exhibitions/[id].vue`
-            - Календар працює у режимі **range**, з локаллю **uk**, без таймпікера, формат вводу `dd.MM.yyyy`.
-            - Збереження дат у БД як рядки `YYYY-MM-DD` (уникаємо зсувів TZ для Europe/Kyiv).
-          labels: |
-            task
-            TASK-016
+            - Календар працює у режимі range, локаль uk, без таймпікера, формат вводу `dd.MM.yyyy`.
+            - Збереження дат у БД як рядки `YYYY-MM-DD` (TZ Europe/Kyiv).
+          labels: "task,TASK-016"
