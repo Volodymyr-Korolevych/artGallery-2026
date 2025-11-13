@@ -1,0 +1,382 @@
+name: Apply TASK-013 (Past & Upcoming exhibitions pages + components)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to commit to"
+        required: true
+        default: "main"
+      commit_message:
+        description: "Message"
+        required: true
+        default: "TASK-013: /exhibitions/past (grid 3 cols) + ExhibitionCardPast; /exhibitions/upcoming (list, 4 per page) + ExhibitionItemUpcoming"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      # -------------------------
+      # Component: ExhibitionCardPast (grid cell for past)
+      # -------------------------
+      - name: Write components/ExhibitionCardPast.vue
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p components
+          cat > components/ExhibitionCardPast.vue <<'VUE'
+          <script setup lang="ts">
+          const props = defineProps<{
+            slug: string
+            title: string
+            startDate: string|null
+            endDate: string|null
+            cardUrl: string|null
+            artist?: { fullName: string; slug: string } | null
+          }>()
+          const go = (p:string) => navigateTo(p)
+          const goArtist = () => { if (props.artist?.slug) go('/artists/'+props.artist.slug) }
+          const goDetails = () => go('/exhibitions/'+props.slug)
+
+          const fmtRange = (s: string|null, e: string|null) => {
+            const toD = (v:string|null)=> v? new Date(v):null
+            const f = (d:Date)=> d.toLocaleDateString('uk-UA',{year:'numeric',month:'long',day:'numeric'})
+            const sd = toD(s), ed = toD(e)
+            if(sd && ed) return `${f(sd)} — ${f(ed)}`
+            if(sd) return f(sd)
+            if(ed) return f(ed)
+            return ''
+          }
+          </script>
+
+          <template>
+            <v-card class="xcard">
+              <div class="img-frame">
+                <v-img v-if="cardUrl" :src="cardUrl" :alt="title" height="220" contain />
+                <div v-else class="ph">Зображення відсутнє</div>
+              </div>
+              <div class="body serif">
+                <div class="dates">{{ fmtRange(startDate, endDate) }}</div>
+                <h3 class="title">{{ title }}</h3>
+                <div class="artist" v-if="artist">
+                  Художник: <a class="a" @click.prevent="goArtist">{{ artist.fullName }}</a>
+                </div>
+                <div class="actions">
+                  <v-btn color="primary" @click="goDetails">Детальніше</v-btn>
+                </div>
+              </div>
+            </v-card>
+          </template>
+
+          <style scoped>
+          .xcard{ display:grid; gap:10px; padding:12px; }
+          .ph{ height:220px; display:flex; align-items:center; justify-content:center; color:rgba(0,0,0,.45) }
+          .body{ display:grid; gap:6px; }
+          .serif { font-family: "Cormorant Garamond", serif; }
+          .title{ font-size:20px; line-height:1.25; }
+          .dates{ font-size:14px; opacity:.8; }
+          .artist{ font-size:15px; }
+          .a{ color:inherit; text-decoration:underline; cursor:pointer; }
+          .actions{ margin-top:6px; }
+          </style>
+          VUE
+
+      # -------------------------
+      # Page: /exhibitions/past (grid 3 cols)
+      # -------------------------
+      - name: Write pages/exhibitions/past.vue
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pages/exhibitions
+          cat > pages/exhibitions/past.vue <<'VUE'
+          <script setup lang="ts">
+          definePageMeta({ layout: 'default' })
+          const supabase = useSupabaseClient()
+
+          type Exhibition = {
+            id: number
+            slug: string
+            title: string
+            status: 'past'|'current'|'upcoming'|null
+            startDate: string|null
+            endDate: string|null
+            cardUrl: string|null
+            painterId: number|null
+            isPublished: boolean|null
+          }
+          type Artist = { id:number; fullName:string; slug:string }
+
+          const loading = ref(true)
+          const items = ref<Exhibition[]>([])
+          const artistMap = ref<Record<number, Artist>>({})
+
+          const fetchAll = async () => {
+            loading.value = true
+            const { data: ex } = await supabase
+              .from('exhibitions')
+              .select('id,slug,title,status,"startDate","endDate","cardUrl","painterId","isPublished"')
+              .eq('isPublished', true)
+              .eq('status','past')
+              .order('startDate', { ascending: false })
+
+            items.value = (ex || []) as Exhibition[]
+            const ids = [...new Set(items.value.map(x => x.painterId).filter(Boolean))] as number[]
+            if (ids.length) {
+              const { data: arts } = await supabase.from('artists').select('id,"fullName",slug').in('id', ids)
+              const map: Record<number, Artist> = {}
+              ;(arts||[]).forEach((a:any)=>{ map[a.id] = a as Artist })
+              artistMap.value = map
+            } else {
+              artistMap.value = {}
+            }
+            loading.value = false
+          }
+          onMounted(fetchAll)
+
+          const artistOf = (e: Exhibition) => e.painterId ? artistMap.value[e.painterId] || null : null
+          </script>
+
+          <template>
+            <div class="container page">
+              <h1 class="title serif">Минулі експозиції</h1>
+
+              <v-skeleton-loader v-if="loading" type="article, image"></v-skeleton-loader>
+
+              <div v-else class="grid">
+                <ExhibitionCardPast
+                  v-for="e in items"
+                  :key="e.id"
+                  :slug="e.slug"
+                  :title="e.title"
+                  :startDate="e.startDate"
+                  :endDate="e.endDate"
+                  :cardUrl="e.cardUrl"
+                  :artist="artistOf(e)"
+                />
+                <div v-if="!items.length" class="muted">Немає експозицій для показу.</div>
+              </div>
+            </div>
+          </template>
+
+          <style scoped>
+          .page{ padding-top:18px; padding-bottom:28px; }
+          .title{ font-size: clamp(28px, 3vw, 40px); margin-bottom: 10px; }
+          .serif { font-family: "Cormorant Garamond", serif; }
+
+          .grid{
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+          }
+          @media (max-width: 1100px){
+            .grid{ grid-template-columns: repeat(2, 1fr); }
+          }
+          @media (max-width: 700px){
+            .grid{ grid-template-columns: 1fr; }
+          }
+          </style>
+          VUE
+
+      # -------------------------
+      # Component: ExhibitionItemUpcoming (list row with cover left, info right)
+      # -------------------------
+      - name: Write components/ExhibitionItemUpcoming.vue
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p components
+          cat > components/ExhibitionItemUpcoming.vue <<'VUE'
+          <script setup lang="ts">
+          const props = defineProps<{
+            slug: string
+            title: string
+            short: string|null
+            coverUrl: string|null
+            artist?: { fullName: string; slug: string } | null
+          }>()
+          const go = (p:string) => navigateTo(p)
+          const goArtist = () => { if (props.artist?.slug) go('/artists/'+props.artist.slug) }
+          const goDetails = () => go('/exhibitions/'+props.slug)
+          </script>
+
+          <template>
+            <v-card class="row">
+              <div class="left img-frame">
+                <v-img v-if="coverUrl" :src="coverUrl" :alt="title" height="140" width="220" cover />
+                <div v-else class="ph">—</div>
+              </div>
+              <div class="right serif">
+                <h3 class="title">{{ title }}</h3>
+                <div class="artist" v-if="artist">
+                  Художник: <a class="a" @click.prevent="goArtist">{{ artist.fullName }}</a>
+                </div>
+                <div class="short" v-if="short">{{ short }}</div>
+                <div class="actions">
+                  <v-btn color="primary" @click="goDetails">Детальніше</v-btn>
+                </div>
+              </div>
+            </v-card>
+          </template>
+
+          <style scoped>
+          .row{
+            display:grid;
+            grid-template-columns: 240px 1fr;
+            gap: 16px;
+            padding: 12px;
+          }
+          .left{ width: 240px; }
+          .ph{ height:140px; display:flex; align-items:center; justify-content:center; color:rgba(0,0,0,.45) }
+          .right{ display:grid; gap:6px; }
+          .serif { font-family: "Cormorant Garamond", serif; }
+          .title{ font-size: 22px; line-height:1.2; }
+          .a{ color:inherit; text-decoration:underline; cursor:pointer; }
+          .short{ font-size: 16px; line-height: 1.45; }
+          </style>
+          VUE
+
+      # -------------------------
+      # Page: /exhibitions/upcoming (list, 4 per page, pagination)
+      # -------------------------
+      - name: Write pages/exhibitions/upcoming.vue
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pages/exhibitions
+          cat > pages/exhibitions/upcoming.vue <<'VUE'
+          <script setup lang="ts">
+          definePageMeta({ layout: 'default' })
+          const supabase = useSupabaseClient()
+          const route = useRoute()
+          const router = useRouter()
+
+          type Exhibition = {
+            id: number
+            slug: string
+            title: string
+            short: string|null
+            status: 'past'|'current'|'upcoming'|null
+            coverUrl: string|null
+            painterId: number|null
+            isPublished: boolean|null
+            startDate: string|null
+          }
+          type Artist = { id:number; fullName:string; slug:string }
+
+          const loading = ref(true)
+          const items = ref<Exhibition[]>([])
+          const artistMap = ref<Record<number, Artist>>({})
+
+          const pageSize = 4
+          const page = ref<number>(Number(route.query.page || 1) || 1)
+          watch(() => route.query.page, (q) => {
+            const p = Number(q || 1) || 1
+            page.value = p < 1 ? 1 : p
+          })
+
+          const fetchAll = async () => {
+            loading.value = true
+            const { data: ex } = await supabase
+              .from('exhibitions')
+              .select('id,slug,title,short,status,coverUrl,"painterId","isPublished","startDate"')
+              .eq('isPublished', true)
+              .eq('status','upcoming')
+              .order('startDate', { ascending: true })
+
+            items.value = (ex || []) as Exhibition[]
+
+            const ids = [...new Set(items.value.map(x => x.painterId).filter(Boolean))] as number[]
+            if (ids.length) {
+              const { data: arts } = await supabase.from('artists').select('id,"fullName",slug').in('id', ids)
+              const map: Record<number, Artist> = {}
+              ;(arts||[]).forEach((a:any)=>{ map[a.id] = a as Artist })
+              artistMap.value = map
+            } else {
+              artistMap.value = {}
+            }
+            loading.value = false
+          }
+          onMounted(fetchAll)
+
+          const artistOf = (e: Exhibition) => e.painterId ? artistMap.value[e.painterId] || null : null
+
+          const pageCount = computed(() => Math.max(1, Math.ceil(items.value.length / pageSize)))
+          const paged = computed(() => {
+            const start = (page.value - 1) * pageSize
+            return items.value.slice(start, start + pageSize)
+          })
+
+          const goPage = (p:number) => {
+            const safe = Math.min(Math.max(1, p), pageCount.value)
+            router.replace({ query: { ...route.query, page: safe } })
+          }
+          </script>
+
+          <template>
+            <div class="container page">
+              <h1 class="title serif">Майбутні експозиції</h1>
+
+              <v-skeleton-loader v-if="loading" type="article, image"></v-skeleton-loader>
+
+              <div v-else>
+                <div v-if="!items.length" class="muted">Наразі немає анонсованих експозицій.</div>
+
+                <div class="list" v-else>
+                  <ExhibitionItemUpcoming
+                    v-for="e in paged"
+                    :key="e.id"
+                    :slug="e.slug"
+                    :title="e.title"
+                    :short="e.short"
+                    :coverUrl="e.coverUrl"
+                    :artist="artistOf(e)"
+                  />
+                </div>
+
+                <div class="pager" v-if="pageCount > 1">
+                  <v-btn variant="tonal" :disabled="page<=1" @click="goPage(page-1)">Попередня</v-btn>
+                  <span class="muted">Сторінка {{ page }} з {{ pageCount }}</span>
+                  <v-btn variant="tonal" :disabled="page>=pageCount" @click="goPage(page+1)">Наступна</v-btn>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <style scoped>
+          .page{ padding-top:18px; padding-bottom:28px; }
+          .title{ font-size: clamp(28px, 3vw, 40px); margin-bottom: 10px; }
+          .serif { font-family: "Cormorant Garamond", serif; }
+
+          .list{
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+
+          .pager{
+            display:flex; align-items:center; justify-content:center; gap:12px;
+            margin-top: 16px;
+          }
+          </style>
+          VUE
+
+      - name: Commit & push
+        run: |
+          git config user.name "gallery-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin HEAD:${{ github.event.inputs.branch }}
