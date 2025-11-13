@@ -45,11 +45,9 @@ jobs:
               node - <<'NODE'
               const fs = require('fs');
               const p = 'nuxt.config.ts';
-              if (!fs.existsSync(p)) process.exit(0);
               let s = fs.readFileSync(p, 'utf8');
               const cssEntry = "'@vuepic/vue-datepicker/dist/main.css'";
               const cssBlockRegex = /css:\s*\[([\s\S]*?)\]/m;
-
               if (cssBlockRegex.test(s)) {
                 if (!s.includes(cssEntry)) {
                   s = s.replace(cssBlockRegex, (m, inside) => {
@@ -70,264 +68,82 @@ jobs:
             echo "nuxt.config.ts not found — skipping CSS injection."
           fi
 
-      - name: Write pages/admin/exhibitions/new.vue
+      - name: Write pages/admin/exhibitions/new.vue (base64)
         shell: bash
         run: |
           mkdir -p pages/admin/exhibitions
-          cat > pages/admin/exhibitions/new.vue <<'VUE'
-<template>
-  <div class="p-6 space-y-6">
-    <div class="grid gap-4 md:grid-cols-2">
-      <div>
-        <label class="block mb-2 text-sm font-medium">Назва виставки</label>
-        <input v-model="title" type="text" class="w-full border rounded px-3 py-2" placeholder="Наприклад: «Тіні та Світло»" />
-      </div>
-      <div>
-        <label class="block mb-2 text-sm font-medium">Slug</label>
-        <input v-model="slug" type="text" class="w-full border rounded px-3 py-2" placeholder="naprklad-tini-ta-svitlo" />
-      </div>
-    </div>
+          cat > /tmp/new.vue.b64 <<'B64'
+PFRlbXBsYXRlPgo8ZGl2IGNsYXNzPSJwLTYgc3BhY2UteTYiPgogIDxkaXYgY2xhc3M9ImdyaWQg
+Z2FwLTQgbWQtZ3JpZC1jb2xzLTIiPgogICAgPGRpdj4KICAgICAgPGxhYmVsIGNsYXNzPSJibG9j
+ayBtYi0yIHRleHQtc20gZm9udC1tZWRpdW0iPuKAmuKAjSBOYXp2YSB2aXN0YXZraSDigIzigI08
+L2xhYmVsPgogICAgICA8aW5wdXQgdi1tb2RlbD0idGl0bGUiIHR5cGU9InRleHQiIGNsYXNzPSJ3
+LWZ1bGwgYm9yZGVyIHJvdW5kZWQgcHgtMyBweS0yIiBwbGFjZWhvbGRlcj0iTmFwcmtseWFkOiB0
+aW5pLXRhLXN2aXRsbyIgLz4KICAgIDwvZGl2PgogICAgPGRpdj4KICAgICAgPGxhYmVsIGNsYXNz
+PSJibG9jayBtYi0yIHRleHQtc20gZm9udC1tZWRpdW0iPlNsdWc8L2xhYmVsPgogICAgICA8aW5w
+dXQgdi1tb2RlbD0ic2x1ZyIgdHlwZT0idGV4dCIgY2xhc3M9IndmdWxsIGJvcmRlciByb3VuZGVk
+IHB4LTMgcHktMiIgcGxhY2Vob2xkZXI9Im5hcHJrbGFkLXRpbmktdGEtc3ZpdGxvIiAvPgogICAg
+PC9kaXY+CiAgPC9kaXY+CgogIDxkaXY+CiAgICA8bGFiZWwgY2xhc3M9ImJsb2NrIG1iLTIgdGV4
+dC1zbSBmb250LW1lZGl1bSI+0JvQvtC20L3QviDQv9GA0L7QstC+PC9sYWJlbD4KICAgIDx0ZXh0
+YXJlYSB2LW1vZGVsPSJkZXNjcmlwdGlvbiIgcm93cz0iNSIgY2xhc3M9IndmdWxsIGJvcmRlciBy
+b3VuZGVkIHB4LTMgcHktMiIgcGxhY2Vob2xkZXI9ItCd0L7QstC+0LQg0LrQvtC70YzQutCw0Y8g
+0LrQvtC80LrQuCDQstGB0LUuLi4iPjwvdGV4dGFyZWE+CiAgPC9kaXY+CgogIDxkaXYgY2xhc3M9
+ImdyaWQgZ2FwLTQgbWQtZ3JpZC1jb2xzLTIiPgogICAgPGRpdj4KICAgICAgPGxhYmVsIGNsYXNz
+PSJibG9jayBtYi0yIHRleHQtc20gZm9udC1tZWRpdW0iPtCg0L7Qt9C+0LrQsNGC0YzRjyAoSUQp
+PC9sYWJlbD4KICAgICAgPGlucHV0IHYtbW9kZWwubnVtYmVyPSJwYWludGVySWQiIHR5cGU9Im51
+bWJlciIgbWluPSIxIiBjbGFzcz0id2Z1bGwgYm9yZGVyIHJvdW5kZWQgcHgtMyBweS0yIiBwbGFj
+ZWhvbGRlcj0iSUQgaHVkb3podW5rYSIgLz4KICAgIDwvZGl2PgogICAgPGRpdj4KICAgICAgPGxh
+YmVsIGNsYXNzPSJibG9jayBtYi0yIHRleHQtc20gZm9udC1tZWRpdW0iPtCf0YDQsNCz0YDRg9C8
+0LggKFVSTCk8L2xhYmVsPgogICAgICA8aW5wdXQgdi1tb2RlbD0iY292ZXJVcmwiIHR5cGU9InVy
+bCIgY2xhc3M9IndmdWxsIGJvcmRlciByb3VuZGVkIHB4LTMgcHktMiIgcGxhY2Vob2xkZXI9Imh0
+dHBzOi8vLi4uIiAvPgogICAgPC9kaXY+CiAgPC9kaXY+CgogIDxkaXY+CiAgICA8bGFiZWwgY2xh
+c3M9ImJsb2NrIG1iLTIgdGV4dC1zbSBmb250LW1lZGl1bSI+0LfQvtC70LjRh9C90L7Qs9C+0LPQ
+sCDQtNC+0LHQsNC70YzQvdC+ICg1VUwpPC9sYWJlbD4KICAgIDxpbnB1dCB2LW1vZGVsPSJjYXJk
+VXJsIiB0eXBlPSJ1cmwiIGNsYXNzPSJ3ZnVsbCBib3JkZXIgcm91bmRlZCBweC0zIHB5LTIiIHBs
+YWNlaG9sZGVyPSJodHRwczovLy4uLiIgLz4KICA8L2Rpdj4KCiAgPENsaWVudE9ubHk+CiAgICA8
+ZGl2PgogICAgICA8bGFiZWwgY2xhc3M9ImJsb2NrIG1iLTIgdGV4dC1zbSBmb250LW1lZGl1bSI+
+0J7QvdC+0LLQu9CwINC/0L7RgNGW0YHRjzwvbGFiZWw+CiAgICAgIDxWdWVEYXRlUGlja2VyCiAg
+ICAgICAgdi1tb2RlbD0icGVyaW9kIgogICAgICAgIDpsb2NhbGU9InVrIgogICAgICAgIHJhbmdl
+CiAgICAgICAgOndlZWstc3RhcnQ9IjEiCiAgICAgICAgOmVuYWJsZS10aW1lLXBpY2tlcj0iZmFs
+c2UiCiAgICAgICAgYXV0by1hcHBseQogICAgICAgIGZvcm1hdD0iZGQuTU0ueXl5eSIKICAgICAg
+ICBwbGFjZWhvbGRlcj0i0J7QutCw0Log0L/RgNC+0LLQviAo0LrRg9C80L7QuC0g4oCUINC/0YDQ
+vtCyKSIKICAgICAgLz4KICAgIDwvZGl2PgogIDwvQ2xpZW50T25seT4KCiAgPGRpdiBjbGFzcz0i
+cHQtNCI+CiAgICA8YnV0dG9uCiAgICAgIDpkaXNhYmxlZD0iIWlzdmFsaWQiCiAgICAgIGNsYXNz
+PSJweC00IHB5LTIgcm91bmRlZCBiZy1ibHVlLTYwMCB0ZXh0LXdoaXRlIGRpc2FibGVkOm9wYWNp
+dHktNTAiCiAgICAgIEBjbGljaz0ic3VibWl0IgogICAgPgogICAgICDQodC10YHRgtCw0L3QvdC+
+INCy0YvQsdC40LrQvtCzCiAgICA8L2J1dHRvbj4KICA8L2Rpdj4KPC9kaXY+CjwvVGVtcGxhdGU+
+CjxzY3JpcHQgc2V0dXAgbGFuZz0idHMiPmltcG9ydCB7IHJlZiwgY29tcHV0ZWQgfSBmcm9tICd2
+dWUnCmltcG9ydCBWdWVEYXRlUGlja2VyIGZyb20gJ0B2dWVwaWMvdnVlLWRhdGVwaWNrZXInCmlt
+cG9ydCB7IHVrIH0gZnJvbSAnZGF0ZS1mbnMvbG9jYWxlJwppbXBvcnQgeyBmb3JtYXQgfSBmcm9t
+ICdkYXRlLWZucycKY29uc3QgdGl0bGUgPSByZWYoJyc pCmNvbnN0IHNsdWcgPSByZWYoJyc pCmNv
+bnN0IGRlc2NyaXB0aW9uID0gcmVmKCcnKQpjb25zdCBwYWludGVySWQgPSByZWYo bnVsbCkgCmNv
+bnN0IGNvdmVyVXJsID0gcmVmKCcnKQpjb25zdCBjYXJkVXJsID0gcmVmKCcnKQpjb25zdCBwZXJp
+b2QgPSByZWYoW251bGwsIG51bGxdKQpjb25zdCB0b1lNRCA9IGQgPT4gKGQgPyBmb3JtYXQoZCwg
+J3l5eXktTU0tZGQnKSA6IG51bGwpCmNvbnN0IHN0YXJ0RGF0ZSA9IGNvbXB1dGVkKCkgPT4gdG9Z
+TUQocGVyaW9kLnZhbHVlPy5bMF0gfHwgbnVsbCkKY29uc3QgZW5kRGF0ZSA9IGNvbXB1dGVkKCkg
+PT4gdG9ZTURwZXJpb2QudmFsdWU/LlsxXSB8fCBudWxsKQpjb25zdCBpc1ZhbGlkID0gY29tcHV0
+ZWQoKCkgPT4gISF0aXRsZS52YWx1ZS50cmltKCkgJiYgISFzdGFydERhdGUudmFsdWUgJiYgISFl
+bmREYXRlLnZhbHVlICYmICEhcGFpbnRlcklkLnZhbHVlKQpjb25zdCBzdWJtaXQgPSBhc3luYyAo
+KSA9PiB7IGlmICghaXNWYWxpZC52YWx1ZSkgcmV0dXJuIGNvbnN0IHBheWxvYWQgPSB7IHRpdGxl
+OiB0aXRsZS52YWx1ZSwgc2x1Zzogc2x1Zy52YWx1ZSwgZGVzY3JpcHRpb246IGRlc2NyaXB0aW9u
+LnZhbHVlLCBzdGFydERhdGU6IHN0YXJ0RGF0ZS52YWx1ZSwgZW5kRGF0ZTogZW5kRGF0ZS52YWx1
+ZSwgcGFpbnRlcklkOiBwYWludGVySWQudmFsdWUsIGNvdmVyVXJsOiBjb3ZlclVybC52YWx1ZSwg
+Y2FyZFVybDogY2FyZFVybC52YWx1ZSwgaXNQdWJsaXNoZWQ6IHRydWUgfSBjb25zb2xlLmxvZygn
+U3VibWl0IHBheWxvYWQnLCBwYXlsb2FkKSB9IAo8L3NjcmlwdD4=
+B64
+          base64 -d /tmp/new.vue.b64 > pages/admin/exhibitions/new.vue
 
-    <div>
-      <label class="block mb-2 text-sm font-medium">Опис</label>
-      <textarea v-model="description" rows="5" class="w-full border rounded px-3 py-2" placeholder="Короткий опис виставки..."></textarea>
-    </div>
-
-    <div class="grid gap-4 md:grid-cols-2">
-      <div>
-        <label class="block mb-2 text-sm font-medium">Художник (ID)</label>
-        <input v-model.number="painterId" type="number" min="1" class="w-full border rounded px-3 py-2" placeholder="ID художника" />
-      </div>
-      <div>
-        <label class="block mb-2 text-sm font-medium">Обкладинка (URL)</label>
-        <input v-model="coverUrl" type="url" class="w-full border rounded px-3 py-2" placeholder="https://..." />
-      </div>
-    </div>
-
-    <div>
-      <label class="block mb-2 text-sm font-medium">Зображення картки (URL)</label>
-      <input v-model="cardUrl" type="url" class="w-full border rounded px-3 py-2" placeholder="https://..." />
-    </div>
-
-    <ClientOnly>
-      <div>
-        <label class="block mb-2 text-sm font-medium">Період виставки</label>
-        <VueDatePicker
-          v-model="period"
-          :locale="uk"
-          range
-          :week-start="1"
-          :enable-time-picker="false"
-          auto-apply
-          format="dd.MM.yyyy"
-          placeholder="Оберіть період (з — по)"
-        />
-      </div>
-    </ClientOnly>
-
-    <div class="pt-4">
-      <button
-        :disabled="!isValid"
-        class="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
-        @click="submit"
-      >
-        Зберегти виставку
-      </button>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { ref, computed } from 'vue'
-import VueDatePicker from '@vuepic/vue-datepicker'
-import { uk } from 'date-fns/locale'
-import { format } from 'date-fns'
-
-const title = ref('')
-const slug = ref('')
-const description = ref('')
-const painterId = ref<number | null>(null)
-const coverUrl = ref('')
-const cardUrl = ref('')
-
-const period = ref<[Date | null, Date | null]>([null, null])
-
-const toYMD = (d: Date | null) => (d ? format(d, 'yyyy-MM-dd') : null)
-const startDate = computed(() => toYMD(period.value?.[0] ?? null))
-const endDate   = computed(() => toYMD(period.value?.[1] ?? null))
-
-const isValid = computed(() =>
-  !!title.value.trim() &&
-  !!startDate.value &&
-  !!endDate.value &&
-  !!painterId.value
-)
-
-const submit = async () => {
-  if (!isValid.value) return
-  const payload = {
-    title: title.value,
-    slug: slug.value,
-    description: description.value,
-    startDate: startDate.value,
-    endDate: endDate.value,
-    painterId: painterId.value,
-    coverUrl: coverUrl.value,
-    cardUrl: cardUrl.value,
-    isPublished: true
-  }
-  console.log('Submit payload', payload)
-}
-</script>
-VUE
-
-      - name: Write pages/admin/exhibitions/[id].vue
+      - name: Write pages/admin/exhibitions/[id].vue (base64)
         shell: bash
         run: |
-          cat > "pages/admin/exhibitions/[id].vue" <<'VUE'
-<template>
-  <div class="p-6 space-y-6">
-    <div class="grid gap-4 md:grid-cols-2">
-      <div>
-        <label class="block mb-2 text-sm font-medium">Назва виставки</label>
-        <input v-model="title" type="text" class="w-full border rounded px-3 py-2" />
-      </div>
-      <div>
-        <label class="block mb-2 text-sm font-medium">Slug</label>
-        <input v-model="slug" type="text" class="w-full border rounded px-3 py-2" />
-      </div>
-    </div>
-
-    <div>
-      <label class="block mb-2 text-sm font-medium">Опис</label>
-      <textarea v-model="description" rows="5" class="w-full border rounded px-3 py-2"></textarea>
-    </div>
-
-    <div class="grid gap-4 md:grid-cols-2">
-      <div>
-        <label class="block mb-2 text-sm font-medium">Художник (ID)</label>
-        <input v-model.number="painterId" type="number" min="1" class="w-full border rounded px-3 py-2" />
-      </div>
-      <div>
-        <label class="block mb-2 text-sm font-medium">Обкладинка (URL)</label>
-        <input v-model="coverUrl" type="url" class="w-full border rounded px-3 py-2" />
-      </div>
-    </div>
-
-    <div>
-      <label class="block mb-2 text-sm font-medium">Зображення картки (URL)</label>
-      <input v-model="cardUrl" type="url" class="w-full border rounded px-3 py-2" />
-    </div>
-
-    <ClientOnly>
-      <div>
-        <label class="block mb-2 text-sm font-medium">Період виставки</label>
-        <VueDatePicker
-          v-model="period"
-          :locale="uk"
-          range
-          :week-start="1"
-          :enable-time-picker="false"
-          auto-apply
-          format="dd.MM.yyyy"
-          placeholder="Оберіть період (з — по)"
-        />
-      </div>
-    </ClientOnly>
-
-    <div class="pt-4">
-      <button
-        :disabled="!isValid"
-        class="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
-        @click="update"
-      >
-        Оновити виставку
-      </button>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import VueDatePicker from '@vuepic/vue-datepicker'
-import { uk } from 'date-fns/locale'
-import { parseISO, format } from 'date-fns'
-const route = useRoute()
-
-const title = ref('')
-const slug = ref('')
-const description = ref('')
-const painterId = ref<number | null>(null)
-const coverUrl = ref('')
-const cardUrl = ref('')
-
-const period = ref<[Date | null, Date | null]>([null, null])
-
-const toYMD = (d: Date | null) => (d ? format(d, 'yyyy-MM-dd') : null)
-const startDate = computed(() => toYMD(period.value?.[0] ?? null))
-const endDate   = computed(() => toYMD(period.value?.[1] ?? null))
-
-const isValid = computed(() =>
-  !!title.value.trim() &&
-  !!startDate.value &&
-  !!endDate.value &&
-  !!painterId.value
-)
-
-onMounted(async () => {
-  // TODO: завантажити реальні дані
-  const item: any = null
-  if (item) {
-    title.value = item.title ?? ''
-    slug.value = item.slug ?? ''
-    description.value = item.description ?? ''
-    painterId.value = item.painterId ?? null
-    coverUrl.value = item.coverUrl ?? ''
-    cardUrl.value = item.cardUrl ?? ''
-    period.value = [
-      item.startDate ? parseISO(item.startDate) : null,
-      item.endDate ? parseISO(item.endDate) : null
-    ]
-  }
-})
-
-const update = async () => {
-  if (!isValid.value) return
-  const payload = {
-    title: title.value,
-    slug: slug.value,
-    description: description.value,
-    startDate: startDate.value,
-    endDate: endDate.value,
-    painterId: painterId.value,
-    coverUrl: coverUrl.value,
-    cardUrl: cardUrl.value
-  }
-  console.log('Update payload', payload)
-}
-</script>
-VUE
-
-      - name: Install
-        run: npm install
-
-      - name: Build (non-blocking)
-        run: npm run build || true
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ env.BRANCH }}
-          title: "TASK-016: Datepicker integration (uk locale)"
-          commit-message: "TASK-016: Integrate @vuepic/vue-datepicker with uk locale in admin exhibition forms"
-          body: |
-            ### TASK-016
-            - Додано залежності: `@vuepic/vue-datepicker`, `date-fns`
-            - Додано CSS до `nuxt.config.ts`
-            - Переписано повні файли:
-              - `pages/admin/exhibitions/new.vue`
-              - `pages/admin/exhibitions/[id].vue`
-            - Календар працює у режимі range, локаль uk, без таймпікера, формат вводу `dd.MM.yyyy`.
-            - Збереження дат у БД як рядки `YYYY-MM-DD` (TZ Europe/Kyiv).
-          labels: "task,TASK-016"
+          cat > /tmp/edit.vue.b64 <<'B64'
+PFRlbXBsYXRlPgo8ZGl2IGNsYXNzPSJwLTYgc3BhY2UteTYiPgogIDxkaXYgY2xhc3M9ImdyaWQg
+Z2FwLTQgbWQtZ3JpZC1jb2xzLTIiPgogICAgPGRpdj4KICAgICAgPGxhYmVsIGNsYXNzPSJibG9j
+ayBtYi0yIHRleHQtc20gZm9udC1tZWRpdW0iPuKAmuKAjSBOYXp2YSB2aXN0YXZraSDigIzigI08
+L2xhYmVsPgogICAgICA8aW5wdXQgdi1tb2RlbD0idGl0bGUiIHR5cGU9InRleHQiIGNsYXNzPSJ3
+LWZ1bGwgYm9yZGVyIHJvdW5kZWQgcHgtMyBweS0yIiAvPgogICAgPC9kaXY+CiAgICA8ZGl2Pgog
+ICAgICA8bGFiZWwgY2xhc3M9ImJsb2NrIG1iLTIgdGV4dC1zbSBmb250LW1lZGl1bSI+U2x1Zzwv
+bGFiZWw+CiAgICAgIDxpbnB1dCB2LW1vZGVsPSJzbHVnIiB0eXBlPSJ0ZXh0IiBjbGFzcz0id2Z1
+bGwgYm9yZGVyIHJvdW5kZWQgcHgtMyBweS0yIiAvPgogICAgPC9kaXY+CiAgPC9kaXY+CgogIDxk
+aXY+CiAgICA8bGFiZWwgY2xhc3M9ImJsb2NrIG1iLTIgdGV4dC1zbSBmb250LW1lZGl1bSI+0JvQ
+vtC20L3QviDQv9GA0L7QstC+PC9sYWJlbD4KICAgIDx0ZXh0YXJlYSB2LW1vZGVsPSJkZXNjcmlw
+dGlvbiIgcm93cz0iNSIgY2xhc3M9IndmdWxsIGJvcmRlciByb3VuZGVkIHB4LT
