@@ -1,1 +1,4 @@
 admin first.admin@artgallery.com 133244355 id=aee7fd82-c3b4-4974-9210-58e08075a151
+CXrVX1ExD7PccmxJ
+PS C:\Users\volod> $env:PGPASSWORD = "CXrVX1ExD7PccmxJ"
+>> pg_dump -d "postgresql://postgres.ampbgswzmpanjkuuisiz:CXrVX1ExD7PccmxJ@aws-1-eu-west-1.pooler.supabase.com:5432/postgres" -U postgres  -s > file.sql        
