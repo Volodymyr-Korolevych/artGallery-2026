@@ -1,345 +1,123 @@
-<script setup lang="ts">
-definePageMeta({ layout: 'admin', middleware: 'admin-only' })
-const route = useRoute()
-const supabase = useSupabaseClient()
-const { uploadCoverForExhibition, uploadCardForExhibition } = useStorageUpload()
-const { removeExhibitionFiles } = useExhibitionStorage()
-const { uploadArtwork } = useArtworkUpload()
-
-const id = Number(route.params.id)
-const title = ref('Редагувати виставку')
-const artists = ref<any[]>([])
-const form = ref<any>(null)
-const loading = ref(true)
-const saving  = ref(false)
-const editMode = ref(true)
-const errorMsg = ref<string | null>(null)
-
-const fromISOtoYMD = (s: string | null) => {
-  if (!s) return null
-  const d = new Date(s)
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth()+1).padStart(2,'0')
-  const dd = String(d.getDate()).padStart(2,'0')
-  return `${yyyy}-${mm}-${dd}`
-}
-
-type Artwork = {
-  id?: number
-  exhibitionId: number
-  artistId: number | null
-  title: string
-  year: number | null
-  description: string | null
-  slot: number
-  imageUrl: string | null
-}
-const artworks = ref<Artwork[]>([])
-
-// ----- Dialog (fixed slot) -----
-const dialog = ref(false)
-const currentSlot = ref<number>(1)
-const artForm = ref<Artwork>({
-  exhibitionId: id, artistId: null, title: '', year: null, description: '', slot: 1, imageUrl: null
-})
-const fileInput = ref<HTMLInputElement|null>(null)
-const filePending = ref<File|null>(null)
-const editingId = ref<number | null>(null)
-const uploadBusy = ref(false)
-const uploadError = ref<string | null>(null)
-
-const isClient = ref(false)
-onMounted(() => { isClient.value = true })
-
-const previewUrl = ref<string | null>(null)
-let _prevObjectUrl: string | null = null
-watch(() => filePending.value, (f) => {
-  if (_prevObjectUrl) { URL.revokeObjectURL(_prevObjectUrl); _prevObjectUrl = null }
-  if (f) {
-    const u = URL.createObjectURL(f)
-    _prevObjectUrl = u
-    previewUrl.value = u
-  } else {
-    previewUrl.value = artForm.value?.imageUrl || null
-  }
-})
-watch(() => artForm.value?.imageUrl, (u) => {
-  if (!filePending.value) previewUrl.value = u || null
-})
-onBeforeUnmount(() => {
-  if (_prevObjectUrl) URL.revokeObjectURL(_prevObjectUrl)
-})
-
-const pickArtFile = () => fileInput.value?.click()
-const onArtFile = (e: Event) => {
-  const f = (e.target as HTMLInputElement).files?.[0] || null
-  filePending.value = f
-}
-
-const fetchArtists = async () => {
-  const { data } = await supabase.from('artists').select('id,"fullName"').order('fullName')
-  artists.value = data || []
-}
-const fetchExhibition = async () => {
-  const { data } = await supabase.from('exhibitions').select('*').eq('id', id).maybeSingle()
-  if (data) {
-    form.value = {
-      ...data,
-      startDate: fromISOtoYMD(data.startDate),
-      endDate:   fromISOtoYMD(data.endDate)
-    }
-    if (data.isPublished) { title.value = 'Переглянути виставку'; editMode.value = false }
-  }
-}
-const loadArtworks = async () => {
-  const { data } = await supabase
-    .from('artworks')
-    .select('*')
-    .eq('exhibitionId', id)
-    .order('slot')
-  artworks.value = data || []
-}
-
-onMounted(async () => {
-  loading.value = true
-  await Promise.all([fetchArtists(), fetchExhibition(), loadArtworks()])
-  loading.value = false
-})
-
-const enableEdit = () => { editMode.value = true; title.value = 'Редагувати виставку' }
-const close = () => navigateTo('/admin/exhibitions')
-
-const saveExhibition = async () => {
-  if (!form.value) return
-  errorMsg.value = null
-  saving.value = true
-  try {
-    const payload:any = { ...form.value }
-    payload.startDate = form.value.startDate ? new Date(form.value.startDate).toISOString() : null
-    payload.endDate   = form.value.endDate ? new Date(form.value.endDate).toISOString() : null
-    // short, description уже в form.value; сервер оновить відповідні поля
-    const { data, error } = await supabase.from('exhibitions').update(payload).eq('id', id).select('*').single()
-    if (error) throw error
-    if (data?.isPublished) { title.value = 'Переглянути виставку'; editMode.value = false }
-  } catch (e:any) {
-    errorMsg.value = e?.message || 'Помилка збереження'
-  } finally {
-    saving.value = false
-  }
-}
-
-const delExhibition = async () => {
-  if (!confirm('Видалити виставку? Дію не можна скасувати.')) return
-  await removeExhibitionFiles(id)
-  await supabase.from('exhibitions').delete().eq('id', id)
-  navigateTo('/admin/exhibitions')
-}
-
-// Cover/Card uploads
-const coverInput = ref<HTMLInputElement|null>(null)
-const cardInput  = ref<HTMLInputElement|null>(null)
-const pickCover = () => coverInput.value?.click()
-const pickCard  = () => cardInput.value?.click()
-const onCoverChange = async (e: Event) => {
-  const f = (e.target as HTMLInputElement).files?.[0]
-  if (!f || !form.value?.id) return
-  const url = await uploadCoverForExhibition(form.value.id, f)
-  form.value.coverUrl = url
-  await supabase.from('exhibitions').update({ coverUrl: url }).eq('id', form.value.id)
-}
-const onCardChange = async (e: Event) => {
-  const f = (e.target as HTMLInputElement).files?.[0]
-  if (!f || !form.value?.id) return
-  const url = await uploadCardForExhibition(form.value.id, f)
-  form.value.cardUrl = url
-  await supabase.from('exhibitions').update({ cardUrl: url }).eq('id', form.value.id)
-}
-
-const openSlotDialog = (slot: number) => {
-  currentSlot.value = slot
-  const existing = artworks.value.find(a => a.slot === slot)
-  if (existing) {
-    editingId.value = existing.id!
-    artForm.value = { ...existing }
-  } else {
-    editingId.value = null
-    artForm.value = {
-      exhibitionId: id,
-      artistId: form.value?.painterId || null,
-      title: '',
-      year: null,
-      description: '',
-      slot,
-      imageUrl: null
-    }
-  }
-  filePending.value = null
-  uploadError.value = null
-  previewUrl.value = artForm.value.imageUrl || null
-  dialog.value = true
-}
-
-const saveArtwork = async () => {
-  uploadError.value = null
-  try {
-    if (!artForm.value.title?.trim()) throw new Error('Вкажіть назву роботи')
-    uploadBusy.value = true
-
-    if (filePending.value) {
-      const url = await uploadArtwork(id, artForm.value.slot, filePending.value)
-      artForm.value.imageUrl = url
-    }
-
-    if (editingId.value) {
-      await supabase.from('artworks').update({
-        title: artForm.value.title.trim(),
-        year: artForm.value.year,
-        description: artForm.value.description || '',
-        imageUrl: artForm.value.imageUrl,
-        artistId: form.value?.painterId || null
-      }).eq('id', editingId.value)
-    } else {
-      await supabase.from('artworks').insert({
-        exhibitionId: id,
-        artistId: form.value?.painterId || null,
-        title: artForm.value.title.trim(),
-        year: artForm.value.year,
-        description: artForm.value.description || '',
-        slot: artForm.value.slot,
-        imageUrl: artForm.value.imageUrl
-      })
-    }
-
-    dialog.value = false
-    await loadArtworks()
-  } catch (e:any) {
-    uploadError.value = e?.message || 'Помилка під час збереження роботи'
-  } finally {
-    uploadBusy.value = false
-  }
-}
-</script>
-
 <template>
-  <div class="page" v-if="!loading && form">
-    <div class="head">
-      <h1 class="text-h5">{{ title }}</h1>
-      <div class="actions">
-        <v-btn variant="text" @click="close">Закрити</v-btn>
-        <v-btn v-if="!editMode" variant="tonal" @click="enableEdit">Редагувати</v-btn>
-        <v-btn v-if="editMode" color="error" variant="tonal" @click="delExhibition">Видалити</v-btn>
-        <v-btn v-if="editMode" color="primary" :loading="saving" @click="saveExhibition">Зберегти</v-btn>
+  <div class="p-6 space-y-6">
+    <div class="grid gap-4 md:grid-cols-2">
+      <div>
+        <label class="block mb-2 text-sm font-medium">Назва виставки</label>
+        <input v-model="title" type="text" class="w-full border rounded px-3 py-2" />
+      </div>
+      <div>
+        <label class="block mb-2 text-sm font-medium">Slug</label>
+        <input v-model="slug" type="text" class="w-full border rounded px-3 py-2" />
       </div>
     </div>
 
-    <v-card class="pa-4">
-      <v-alert v-if="errorMsg" type="error" class="mb-4" density="compact">{{ errorMsg }}</v-alert>
+    <div>
+      <label class="block mb-2 text-sm font-medium">Опис</label>
+      <textarea v-model="description" rows="5" class="w-full border rounded px-3 py-2"></textarea>
+    </div>
 
-      <v-text-field v-model="form.title" :readonly="!editMode" label="Назва" />
-      <v-select
-        v-model="form.painterId"
-        :items="artists"
-        item-title="fullName"
-        item-value="id"
-        label="Художник"
-        :readonly="!editMode"
-      />
-
-      <v-textarea v-model="form.short" :readonly="!editMode" label="Короткий опис (1 абзац)" auto-grow />   <!-- NEW -->
-      <v-textarea v-model="form.description" :readonly="!editMode" label="Повний опис" auto-grow />
-
-      <div class="grid-2">
-        <v-text-field v-model="form.startDate" label="Дата початку" :readonly="true" />
-        <v-text-field v-model="form.endDate" label="Дата завершення" :readonly="true" />
+    <div class="grid gap-4 md:grid-cols-2">
+      <div>
+        <label class="block mb-2 text-sm font-medium">Художник (ID)</label>
+        <input v-model.number="painterId" type="number" min="1" class="w-full border rounded px-3 py-2" />
       </div>
-
-      <div class="images">
-        <div>
-          <div class="lbl">Cover (фікс. висота 100px, пропорції збережені)</div>
-          <div class="row">
-            <v-btn v-if="editMode" variant="tonал" @click="pickCover">Оберіть файл</v-btn>
-          </div>
-          <input ref="coverInput" type="file" accept="image/*" class="hidden" @change="onCoverChange" />
-          <v-img v-if="form.coverUrl" :src="form.coverUrl" height="100" contain class="mt-2 rounded-lg img-auto" />
-        </div>
-        <div>
-          <div class="lbl">Card (фікс. висота 100px, пропорції збережені)</div>
-          <div class="row">
-            <v-btn v-if="editMode" variant="tonал" @click="pickCard">Оберіть файл</v-btn>
-          </div>
-          <input ref="cardInput" type="file" accept="image/*" class="hidden" @change="onCardChange" />
-          <v-img v-if="form.cardUrl" :src="form.cardUrl" height="100" contain class="mt-2 rounded-lg img-auto" />
-        </div>
+      <div>
+        <label class="block mb-2 text-sm font-medium">Обкладинка (URL)</label>
+        <input v-model="coverUrl" type="url" class="w-full border rounded px-3 py-2" />
       </div>
+    </div>
 
-      <div class="artworks">
-        <div class="subhead">Роботи (макс. 6) — клікніть по слоту</div>
-        <div class="slots">
-          <div v-for="i in 6" :key="i" class="slot" @click="openSlotDialog(i)">
-            <v-img
-              v-if="artworks.find(a => a.slot===i)?.imageUrl"
-              :src="artworks.find(a => a.slot===i)?.imageUrl"
-              height="100"
-              contain
-              class="rounded-lg img-auto"
-            />
-            <div v-else class="placeholder">—</div>
-            <div class="caption">{{ artworks.find(a => a.slot===i)?.title || ('Робота ' + i) }}</div>
-          </div>
-        </div>
+    <div>
+      <label class="block mb-2 text-sm font-medium">Зображення картки (URL)</label>
+      <input v-model="cardUrl" type="url" class="w-full border rounded px-3 py-2" />
+    </div>
+
+    <ClientOnly>
+      <div>
+        <label class="block mb-2 text-sm font-medium">Період виставки</label>
+        <VueDatePicker
+          v-model="period"
+          :locale="uk"
+          range
+          :week-start="1"
+          :enable-time-picker="false"
+          auto-apply
+          format="dd.MM.yyyy"
+          placeholder="Оберіть період (з — по)"
+        />
       </div>
-    </v-card>
+    </ClientOnly>
 
-    <v-dialog v-model="dialog" max-width="520" :retain-focus="false">
-      <v-card class="pa-4">
-        <h2 class="text-subtitle-1 mb-2">Робота {{ currentSlot }}</h2>
-        <v-alert v-if="uploadError" type="error" density="compact" class="mb-2">{{ uploadError }}</v-alert>
-
-        <v-text-field v-model="artForm.title" label="Назва роботи" />
-        <v-text-field v-model.number="artForm.year" label="Рік" type="number" />
-        <v-textarea v-model="artForm.description" label="Опис" auto-grow />
-
-        <div class="row mt-2">
-          <v-btn variant="tonал" @click="pickArtFile">Оберіть файл</v-btn>
-          <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onArtFile" />
-        </div>
-
-        <div class="mt-3">
-          <client-only v-if="isClient">
-            <v-img
-              v-if="previewUrl"
-              :src="previewUrl"
-              height="100"
-              contain
-              class="rounded-lg img-auto"
-            />
-          </client-only>
-        </div>
-
-        <div class="mt-4 d-flex justify-end" style="gap:8px">
-          <v-btn variant="text" @click="dialog=false">Скасувати</v-btn>
-          <v-btn color="primary" :loading="uploadBusy" @click="saveArtwork">Зберегти</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <div class="pt-4">
+      <button
+        :disabled="!isValid"
+        class="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
+        @click="update"
+      >
+        Оновити виставку
+      </button>
+    </div>
   </div>
 </template>
 
-<style scoped>
-.page { display: grid; gap: 16px; }
-.head { display:flex; align-items:center; justify-content:space-between; }
-.actions { display:flex; gap:8px; }
-.grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
-.images { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:8px; }
-.lbl { font-size: 12px; opacity:.8; margin-bottom:4px; }
-.hidden { display:none; }
-.row { display:flex; gap:8px; align-items:center; }
-.img-auto { width: auto; }
-.artworks { margin-top: 16px; }
-.subhead { font-weight:600; margin-bottom: 8px; }
-.slots { display:grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.slot { padding:8px; border:1px dashed rgba(0,0,0,.2); border-radius:8px; text-align:center; cursor:pointer; }
-.placeholder { height:100px; display:flex; align-items:center; justify-content:center; color: rgba(0,0,0,.38); }
-.caption { margin-top:6px; font-size:12px; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-@media (max-width: 1200px) { .slots { grid-template-columns: repeat(3, 1fr); } }
-</style>
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import VueDatePicker from '@vuepic/vue-datepicker'
+import { uk } from 'date-fns/locale'
+import { parseISO, format } from 'date-fns'
+const route = useRoute()
+
+const title = ref('')
+const slug = ref('')
+const description = ref('')
+const painterId = ref<number | null>(null)
+const coverUrl = ref('')
+const cardUrl = ref('')
+
+// Діапазон дат
+const period = ref<[Date | null, Date | null]>([null, null])
+
+const toYMD = (d: Date | null) => (d ? format(d, 'yyyy-MM-dd') : null)
+const startDate = computed(() => toYMD(period.value?.[0] ?? null))
+const endDate   = computed(() => toYMD(period.value?.[1] ?? null))
+
+const isValid = computed(() =>
+  !!title.value.trim() &&
+  !!startDate.value &&
+  !!endDate.value &&
+  !!painterId.value
+)
+
+onMounted(async () => {
+  // TODO: завантажте дані виставки за ID
+  const item: any = null
+  if (item) {
+    title.value = item.title ?? ''
+    slug.value = item.slug ?? ''
+    description.value = item.description ?? ''
+    painterId.value = item.painterId ?? null
+    coverUrl.value = item.coverUrl ?? ''
+    cardUrl.value = item.cardUrl ?? ''
+    period.value = [
+      item.startDate ? parseISO(item.startDate) : null,
+      item.endDate ? parseISO(item.endDate) : null
+    ]
+  }
+})
+
+const update = async () => {
+  if (!isValid.value) return
+  const payload = {
+    title: title.value,
+    slug: slug.value,
+    description: description.value,
+    startDate: startDate.value,
+    endDate: endDate.value,
+    painterId: painterId.value,
+    coverUrl: coverUrl.value,
+    cardUrl: cardUrl.value
+  }
+  // TODO: замінити на реальний запит до API
+  console.log('Update payload', payload)
+}
+</script>
