@@ -1,106 +1,135 @@
-<template>
-  <div class="p-6 space-y-6">
-    <div class="grid gap-4 md:grid-cols-2">
-      <div>
-        <label class="block mb-2 text-sm font-medium">Назва виставки</label>
-        <input v-model="title" type="text" class="w-full border rounded px-3 py-2" placeholder="Наприклад: «Тіні та Світло»" />
-      </div>
-      <div>
-        <label class="block mb-2 text-sm font-medium">Slug</label>
-        <input v-model="slug" type="text" class="w-full border rounded px-3 py-2" placeholder="naprklad-tini-ta-svitlo" />
-      </div>
-    </div>
-
-    <div>
-      <label class="block mb-2 text-sm font-medium">Опис</label>
-      <textarea v-model="description" rows="5" class="w-full border rounded px-3 py-2" placeholder="Короткий опис виставки..."></textarea>
-    </div>
-
-    <div class="grid gap-4 md:grid-cols-2">
-      <div>
-        <label class="block mb-2 text-sm font-medium">Художник (ID)</label>
-        <input v-model.number="painterId" type="number" min="1" class="w-full border rounded px-3 py-2" placeholder="ID художника" />
-      </div>
-      <div>
-        <label class="block mb-2 text-sm font-medium">Обкладинка (URL)</label>
-        <input v-model="coverUrl" type="url" class="w-full border rounded px-3 py-2" placeholder="https://..." />
-      </div>
-    </div>
-
-    <div>
-      <label class="block mb-2 text-sm font-medium">Зображення картки (URL)</label>
-      <input v-model="cardUrl" type="url" class="w-full border rounded px-3 py-2" placeholder="https://..." />
-    </div>
-
-    <ClientOnly>
-      <div>
-        <label class="block mb-2 text-sm font-medium">Період виставки</label>
-        <VueDatePicker
-          v-model="period"
-          :locale="uk"
-          range
-          :week-start="1"
-          :enable-time-picker="false"
-          auto-apply
-          format="dd.MM.yyyy"
-          placeholder="Оберіть період (з — по)"
-        />
-      </div>
-    </ClientOnly>
-
-    <div class="pt-4">
-      <button
-        :disabled="!isValid"
-        class="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
-        @click="submit"
-      >
-        Зберегти виставку
-      </button>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import VueDatePicker from '@vuepic/vue-datepicker'
+definePageMeta({ layout: 'admin', middleware: 'admin-only' })
+import { VueDatePicker } from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css'
 import { uk } from 'date-fns/locale'
 import { format } from 'date-fns'
 
-const title = ref('')
-const slug = ref('')
-const description = ref('')
-const painterId = ref<number | null>(null)
-const coverUrl = ref('')
-const cardUrl = ref('')
+const supabase = useSupabaseClient()
 
-// Діапазон дат
-const period = ref<[Date | null, Date | null]>([null, null])
+const title = ref('Додати виставку')
+const saving = ref(false)
+const errorMsg = ref<string | null>(null)
+const toSlug = (s: string) =>
+  s.toLowerCase().trim().replace(/[^a-zа-яіїє0-9]+/gi, '-').replace(/^-+|-+$/g, '')
 
-const toYMD = (d: Date | null) => (d ? format(d, 'yyyy-MM-dd') : null)
-const startDate = computed(() => toYMD(period.value?.[0] ?? null))
-const endDate   = computed(() => toYMD(period.value?.[1] ?? null))
+const artists = ref<any[]>([])
+const form = ref<any>({
+  title: '',
+  painterId: null,
+  short: '',         // NEW: короткий опис
+  description: '',
+  startDate: null,   // 'YYYY-MM-DD'
+  endDate: null      // 'YYYY-MM-DD'
+})
 
-const isValid = computed(() =>
-  !!title.value.trim() &&
-  !!startDate.value &&
-  !!endDate.value &&
-  !!painterId.value
-)
+const fetchArtists = async () => {
+  const { data } = await supabase.from('artists').select('id,"fullName"').order('fullName')
+  artists.value = data || []
+}
+onMounted(fetchArtists)
 
-const submit = async () => {
-  if (!isValid.value) return
-  const payload = {
-    title: title.value,
-    slug: slug.value,
-    description: description.value,
-    startDate: startDate.value,
-    endDate: endDate.value,
-    painterId: painterId.value,
-    coverUrl: coverUrl.value,
-    cardUrl: cardUrl.value,
-    isPublished: true
+// якщо у вас у БД date, Supabase прийме і 'YYYY-MM-DD', і ISO — лишаємо просту гілку
+const toISOorNull = (s: string | null) => s ? new Date(s).toISOString() : null
+
+const close = () => navigateTo('/admin/exhibitions')
+
+const save = async () => {
+  errorMsg.value = null
+  if (!form.value.title?.trim()) { errorMsg.value = 'Вкажіть назву виставки'; return }
+  if (!form.value.painterId) { errorMsg.value = 'Оберіть художника'; return }
+
+  saving.value = true
+  try {
+    const payload: any = {
+      title: form.value.title.trim(),
+      slug: toSlug(form.value.title),
+      painterId: form.value.painterId,
+      short: form.value.short || null,           // NEW
+      description: form.value.description || '',
+      startDate: toISOorNull(form.value.startDate),
+      endDate: toISOorNull(form.value.endDate),
+      coverUrl: null,
+      cardUrl: null,
+      isPublished: false
+    }
+    const { data, error } = await supabase
+      .from('exhibitions')
+      .insert(payload)
+      .select('id')
+      .single()
+    if (error) throw error
+    navigateTo('/admin/exhibitions/' + data.id)
+  } catch (e: any) {
+    errorMsg.value = e?.message || 'Помилка збереження'
+  } finally {
+    saving.value = false
   }
-  // TODO: замінити на реальний запит до API
-  console.log('Submit payload', payload)
 }
 </script>
+
+<template>
+  <div class="page">
+    <div class="head">
+      <h1 class="text-h5">{{ title }}</h1>
+      <div class="actions">
+        <v-btn variant="text" @click="close">Закрити</v-btn>
+        <v-btn color="primary" :loading="saving" @click="save">Зберегти</v-btn>
+      </div>
+    </div>
+
+    <v-card class="pa-4">
+      <v-alert v-if="errorMsg" type="error" density="compact" class="mb-3">{{ errorMsg }}</v-alert>
+
+      <v-text-field v-model="form.title" label="Назва" />
+      <v-select v-model="form.painterId" :items="artists" item-title="fullName" item-value="id" label="Художник" />
+
+      <v-textarea v-model="form.short" label="Короткий опис (1 абзац)" auto-grow /> <!-- NEW -->
+      <v-textarea v-model="form.description" label="Повний опис" auto-grow />
+
+      <div class="grid-2">
+
+        <div class="date-picker-wrapper">
+          <p style="font-size: small;">Дата початку</p>
+          <!-- Поле для введення дати -->
+          <VueDatePicker v-model="form.startDate" :formats="{ input: 'dd.MM.yyyy' }"
+            :time-config="{ enableTimePicker: false }" :locale="uk" :clearable="false" auto-apply />
+        </div>
+        <div class="date-picker-wrapper">
+          <p style="font-size: small;">Дата завершення</p>
+          <!-- Поле для введення дати -->
+          <VueDatePicker v-model="form.endDate" :formats="{ input: 'dd.MM.yyyy' }"
+            :time-config="{ enableTimePicker: false }" :locale="uk" :clearable="false" auto-apply />
+        </div>
+      </div>
+
+      <v-alert type="info" variant="tonal" density="compact" class="mt-2">
+        Зображення (cover/card) додамо після створення — на сторінці редагування.
+      </v-alert>
+    </v-card>
+  </div>
+</template>
+
+<style scoped>
+.page {
+  display: grid;
+  gap: 12px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+</style>
