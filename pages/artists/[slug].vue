@@ -54,7 +54,7 @@ const fetchData = async () => {
   // 2) Його роботи, що виставлялися в галереї
   const { data: aw } = await supabase
     .from('artworks')
-    .select('id,title,imageUrl,"exhibitionId"')
+    .select('id,title,year,imageUrl,description,"exhibitionId"')
     .eq('artistId', a.id)
     .order('exhibitionId', { ascending: false })
 
@@ -94,7 +94,7 @@ const goExhibition = (slug: string) => navigateTo('/exhibitions/' + slug)
       <div v-if="artist" class="top">
         <!-- Ліва колонка -->
         <div class="left">
-          <h1 class="surname">{{ surname }}</h1>
+          <h1 class="surname">{{ artist.fullName }}</h1>
 
           <div class="field">
             <div class="label">Про художника</div>
@@ -116,13 +116,7 @@ const goExhibition = (slug: string) => navigateTo('/exhibitions/' + slug)
 
         <!-- Права колонка — велике фото (≈50% ширини екрана) -->
         <div class="right img-frame">
-          <v-img
-            v-if="artist.imageUrl"
-            :src="artist.imageUrl"
-            :alt="artist.fullName"
-            height="520"
-            cover
-          />
+          <v-img v-if="artist.imageUrl" :src="artist.imageUrl" :alt="artist.fullName" height="520" cover />
           <div v-else class="ph">Фото відсутнє</div>
         </div>
       </div>
@@ -141,6 +135,8 @@ const goExhibition = (slug: string) => navigateTo('/exhibitions/' + slug)
             </div>
             <div class="meta">
               <div class="title">{{ w.title }}</div>
+              <div class="title">{{ w.year }}</div>
+              <div class="title">{{ w.description }}</div>
               <div class="ex muted" v-if="exMap[w.exhibitionId]">
                 з експозиції:
                 <a class="alink" @click.prevent="goExhibition(exMap[w.exhibitionId].slug)">

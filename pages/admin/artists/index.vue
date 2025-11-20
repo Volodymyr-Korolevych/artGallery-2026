@@ -33,19 +33,12 @@ const open = (id:number) => navigateTo(`/admin/artists/${id}`)
     <v-alert v-if="errorMsg" type="error" density="compact" class="mb-3">{{ errorMsg }}</v-alert>
 
     <v-card>
-      <v-table density="comfortable">
-        <thead>
-          <tr>
-            <th style="width:72px">Портрет</th>
-            <th>Ім’я</th>
-            <th>Країна</th>
-            <th>Рік нар.</th>
-          </tr>
-        </thead>
+      <v-table id="artists-t">
+
         <tbody>
-          <tr v-for="a in items" :key="a.id" class="row" @click="open(a.id)">
-            <td>
-              <v-img v-if="a.imageUrl" :src="a.imageUrl" height="50" contain class="rounded img-auto" />
+          <tr v-for="a in items" :key="a.id" class="mx-4 row" @click="open(a.id)">
+            <td style="width:100px;">
+              <v-img v-if="a.imageUrl" :src="a.imageUrl" height="100" contain class="rounded img-auto" />
             </td>
             <td>{{ a.fullName }}</td>
             <td>{{ a.country || '—' }}</td>
@@ -60,7 +53,13 @@ const open = (id:number) => navigateTo(`/admin/artists/${id}`)
   </div>
 </template>
 
-<style scoped>
+<style>
+#artists-t table {
+  border-spacing: 20px !important;
+}
+#artists-t td {
+  border-color: transparent !important;
+}
 .page { display: grid; gap: 12px; }
 .head { display:flex; align-items:center; justify-content:space-between; }
 .row { cursor: pointer; }

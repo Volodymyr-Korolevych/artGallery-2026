@@ -28,13 +28,20 @@ const signIn = async () => {
 const signUp = async () => {
   err.value=''; loading.value = true
   const uname = username.value.trim() || email.value.split('@')[0]
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: email.value,
     password: password.value,
-    options: { data: { username: uname } }
+    // options: { data: { username: uname } }
   })
   loading.value = false
+  console.log("signUp data:",  data)
   if (error) { err.value = error.message; return }
+  else if (data.user) {
+    await supabase.from('profiles').insert({
+      id: data.user.id,
+      username: uname, // поле з форми
+    })
+  }
   navigateTo('/')
 }
 </script>

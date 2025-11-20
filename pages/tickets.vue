@@ -1,6 +1,9 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'default' })
 
+import QRCode from 'qrcode'
+
+
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const loading = ref(true)
@@ -34,6 +37,8 @@ const qty = reactive<Record<number, number>>({}) // categoryId -> quantity
 const placing = ref(false)
 const showHistory = ref(false)
 const history = ref<OrderRow[]>([])
+const message = ref('')
+const qr = ref('')
 
 const fetchData = async () => {
   loading.value = true
@@ -93,8 +98,16 @@ const placeOrder = async () => {
       quantity: r.quantity,
       amount: r.sum
     }))
-    const { error } = await supabase.from('ticket_orders').insert(rows)
+    const { data,  error } = await supabase.from('ticket_orders').insert(rows)
     if (error) throw error
+    else {
+
+      const url = await QRCode.toDataURL(`order:${user.value!.id}`)
+    
+    qr.value = url
+    message.value = 'Замовлення успішно створено.'
+  
+    }
 
     // Обнулити вибір
     cats.value.forEach(c => qty[c.id] = 0)
@@ -105,6 +118,7 @@ const placeOrder = async () => {
     alert('Помилка під час оформлення замовлення.')
   } finally {
     placing.value = false
+
   }
 }
 
@@ -157,16 +171,8 @@ const fmtDate = (s:string) => new Date(s).toLocaleString('uk-UA', { year:'numeri
                 <td>{{ fmt(Number(c.price)) }}</td>
                 <td class="qty">
                   <v-btn size="small" variant="tonal" @click="dec(c.id)">−</v-btn>
-                  <v-text-field
-                    type="number"
-                    variant="outlined"
-                    density="compact"
-                    hide-details
-                    class="qty-inp"
-                    :model-value="qty[c.id]"
-                    @update:model-value="val => setQty(c.id, Number(val))"
-                    min="0" max="99"
-                  />
+                  <v-text-field type="number" variant="outlined" density="compact" hide-details class="qty-inp"
+                    :model-value="qty[c.id]" @update:model-value="val => setQty(c.id, Number(val))" min="0" max="99" />
                   <v-btn size="small" variant="tonal" @click="inc(c.id)">+</v-btn>
                 </td>
               </tr>
@@ -185,7 +191,11 @@ const fmtDate = (s:string) => new Date(s).toLocaleString('uk-UA', { year:'numeri
           <h2 class="h">Підсумок</h2>
           <v-table density="comfortable" class="tbl">
             <thead>
-              <tr><th>Категорія</th><th>Кількість</th><th>Сума</th></tr>
+              <tr>
+                <th>Категорія</th>
+                <th>Кількість</th>
+                <th>Сума</th>
+              </tr>
             </thead>
             <tbody>
               <tr v-for="r in chosen" :key="r.id">
@@ -204,11 +214,17 @@ const fmtDate = (s:string) => new Date(s).toLocaleString('uk-UA', { year:'numeri
             <div class="sum">{{ fmt(total) }}</div>
           </div>
 
+
+
+
           <v-btn variant="tonal" class="mt" @click="toggleHistory">
             {{ showHistory ? 'Сховати історію ваших замовлень' : 'Показати історію ваших замовлень' }}
           </v-btn>
         </div>
       </div>
+
+      <v-alert v-if="message" type="success" :text="message" class="mt-3" />
+      <img v-if="qr" :src="qr" alt="QR" class="mt-3" />
 
       <!-- НИЖЧЕ: ІСТОРІЯ ЗАМОВЛЕНЬ (на всю ширину) -->
       <div v-if="showHistory" class="history">

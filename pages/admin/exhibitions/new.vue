@@ -88,18 +88,17 @@ const save = async () => {
       <v-textarea v-model="form.description" label="Повний опис" auto-grow />
 
       <div class="grid-2">
-
         <div class="date-picker-wrapper">
           <p style="font-size: small;">Дата початку</p>
-          <!-- Поле для введення дати -->
           <VueDatePicker v-model="form.startDate" :formats="{ input: 'dd.MM.yyyy' }"
-            :time-config="{ enableTimePicker: false }" :locale="uk" :clearable="false" auto-apply />
+            :time-config="{ enableTimePicker: false }" :locale="uk" auto-apply :input-attrs="{ clearable: false }"
+            six-weeks="center" />
         </div>
         <div class="date-picker-wrapper">
           <p style="font-size: small;">Дата завершення</p>
-          <!-- Поле для введення дати -->
           <VueDatePicker v-model="form.endDate" :formats="{ input: 'dd.MM.yyyy' }"
-            :time-config="{ enableTimePicker: false }" :locale="uk" :clearable="false" auto-apply />
+            :time-config="{ enableTimePicker: false }" :locale="uk" :input-attrs="{ clearable: false }"
+            six-weeks="center" auto-apply />
         </div>
       </div>
 

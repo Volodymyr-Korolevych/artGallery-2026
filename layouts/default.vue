@@ -11,7 +11,13 @@
   <AppFooter v-if="false" /> <!-- додасте пізніше; залишено місце -->
 </template>
 
-<style scoped>
+<style>
+body {
+  caret-color: transparent;
+}
+input {
+  caret-color: auto;
+}
 .page-wrap{
   padding-top: 18px;   /* невеликий відступ від хедера */
   padding-bottom: 28px;

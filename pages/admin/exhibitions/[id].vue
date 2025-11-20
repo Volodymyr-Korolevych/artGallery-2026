@@ -223,7 +223,7 @@ const saveArtwork = async () => {
       </div>
     </div>
 
-    <v-card class="pa-4">
+    <v-card class="pa-4" id="TELEPOR">
       <v-alert v-if="errorMsg" type="error" class="mb-4" density="compact">{{ errorMsg }}</v-alert>
 
       <v-text-field v-model="form.title" :readonly="!editMode" label="Назва" />
@@ -237,12 +237,14 @@ const saveArtwork = async () => {
         <div class="date-picker-wrapper">
           <p style="font-size: small;">Дата початку</p>
           <VueDatePicker v-model="form.startDate" :formats="{ input: 'dd.MM.yyyy' }"
-            :time-config="{ enableTimePicker: false }" :locale="uk" :clearable="false" auto-apply />
+            :time-config="{ enableTimePicker: false }" :locale="uk" auto-apply :input-attrs="{ clearable: false }"
+            six-weeks="center" />
         </div>
         <div class="date-picker-wrapper">
           <p style="font-size: small;">Дата завершення</p>
           <VueDatePicker v-model="form.endDate" :formats="{ input: 'dd.MM.yyyy' }"
-            :time-config="{ enableTimePicker: false }" :locale="uk" :clearable="false" auto-apply />
+            :time-config="{ enableTimePicker: false }" :locale="uk" :input-attrs="{ clearable: false }"
+            six-weeks="center" auto-apply />
         </div>
       </div>
 
@@ -250,7 +252,7 @@ const saveArtwork = async () => {
         <div>
           <div class="lbl">Cover (фікс. висота 100px, пропорції збережені)</div>
           <div class="row">
-            <v-btn v-if="editMode" variant="tonал" @click="pickCover">Оберіть файл</v-btn>
+            <v-btn v-if="editMode" variant="tonal" @click="pickCover">Оберіть файл</v-btn>
           </div>
           <input ref="coverInput" type="file" accept="image/*" class="hidden" @change="onCoverChange" />
           <v-img v-if="form.coverUrl" :src="form.coverUrl" height="100" contain class="mt-2 rounded-lg img-auto" />
@@ -258,7 +260,7 @@ const saveArtwork = async () => {
         <div>
           <div class="lbl">Card (фікс. висота 100px, пропорції збережені)</div>
           <div class="row">
-            <v-btn v-if="editMode" variant="tonал" @click="pickCard">Оберіть файл</v-btn>
+            <v-btn v-if="editMode" variant="tonal" @click="pickCard">Оберіть файл</v-btn>
           </div>
           <input ref="cardInput" type="file" accept="image/*" class="hidden" @change="onCardChange" />
           <v-img v-if="form.cardUrl" :src="form.cardUrl" height="100" contain class="mt-2 rounded-lg img-auto" />
@@ -288,7 +290,7 @@ const saveArtwork = async () => {
         <v-textarea v-model="artForm.description" label="Опис" auto-grow />
 
         <div class="row mt-2">
-          <v-btn variant="tonал" @click="pickArtFile">Оберіть файл</v-btn>
+          <v-btn variant="tonal" @click="pickArtFile">Оберіть файл</v-btn>
           <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onArtFile" />
         </div>
 

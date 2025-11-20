@@ -35,6 +35,12 @@ const nav = [
 </template>
 
 <style>
+body {
+  caret-color: transparent;
+}
+input {
+  caret-color: auto;
+}
 .admin-shell {
   min-height: 100vh;
   width: 100%;
