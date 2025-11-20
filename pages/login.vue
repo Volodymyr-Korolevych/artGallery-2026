@@ -29,7 +29,8 @@ const translateError = (msg: string) => {
     return 'Невірна електронна адреса або пароль'
   } else if (text.includes('user already registered') || text.includes('email already registered') || text.includes('duplicate')) {
     return 'Користувач з таким email вже існує'
-  } else if (text.includes('password should be at least') || text.includes('password must be at least')) {
+  } else if (text.includes('password should be at least') || text.includes('password must be at least')
+  || text.includes('signup requires a valid password')) {
     return 'Пароль повинен містити щонайменше 6 символів'
   } else {
     // fallback: повернути оригінальне повідомлення
