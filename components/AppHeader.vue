@@ -5,14 +5,32 @@ const supabase = useSupabaseClient()
 const profile = ref<{ username?: string; role?: string } | null>(null)
 const menu = ref(false)
 
-const fetchProfile = async () => {
-  if (!user.value) { profile.value = null; return }
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('username, role')
-    .eq('id', user.value.id)
-    .maybeSingle()
-  if (!error) profile.value = data
+const fetchProfile = async (retries = 3) => {
+  if (!user.value) {
+    profile.value = null
+    return
+  }
+
+  for (let i = 0; i < retries; i++) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('username, role')
+      .eq('id', user.value.id)
+      .maybeSingle()
+
+    // якщо профіль уже є — зберігаємо і виходимо
+    if (!error && data) {
+      profile.value = data
+      return
+    }
+
+    // якщо профіль ще не встиг створитися (щойно зареєстрований користувач),
+    // трохи зачекаємо й спробуємо ще раз
+    await new Promise(resolve => setTimeout(resolve, 300))
+  }
+
+  // якщо за всі спроби профіль так і не зʼявився
+  profile.value = null
 }
 
 onMounted(fetchProfile)
