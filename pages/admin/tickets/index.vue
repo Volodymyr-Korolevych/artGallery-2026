@@ -121,8 +121,7 @@ const close = () => navigateTo('/admin')
       <v-table density="comfortable">
         <thead>
           <tr>
-            <th style="width:72px">ID</th>
-            <th>Назва</th>
+            <th style="width:240px">Назва</th>
             <th style="width:160px">Ціна</th>
             <th style="width:140px">Активний</th>
             <th style="width:140px">Порядок</th>
@@ -131,14 +130,12 @@ const close = () => navigateTo('/admin')
         </thead>
         <tbody>
           <tr v-for="row in items" :key="row.id">
-            <td class="readonly">{{ row.id }}</td>
             <td><v-text-field v-model="row.name" density="compact" hide-details /></td>
             <td><v-text-field v-model.number="row.price" type="number" min="0" step="0.01" density="compact" hide-details /></td>
             <td class="ta-center"><v-switch v-model="row.isActive" inset color="primary" density="compact" /></td>
             <td><v-text-field v-model.number="row['order']" type="number" min="0" step="1" density="compact" hide-details /></td>
             <td class="row-actions">
               <v-btn size="small" color="primary" variant="tonal" :loading="savingId===row.id" @click="saveRow(row)">Зберегти</v-btn>
-              <v-btn size="small" color="error" variant="text" :loading="savingId===row.id" @click="softDelete(row)">Деактивувати</v-btn>
             </td>
           </tr>
           <tr v-if="!loading && items.length===0">
