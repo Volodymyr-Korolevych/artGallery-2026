@@ -59,7 +59,11 @@ async function redirectByRole() {
   if (profile?.role === 'admin') {
     navigateTo('/admin')
   } else {
-    navigateTo('/')
+    const next = route.query.next
+    if (typeof next === 'string' && next) {
+      return navigateTo(next)
+    }
+    return navigateTo('/')
   }
 }
 

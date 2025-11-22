@@ -3,7 +3,6 @@ definePageMeta({ layout: 'default' })
 
 import QRCode from 'qrcode'
 
-
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const loading = ref(true)
@@ -11,7 +10,7 @@ const loading = ref(true)
 type Exhibition = {
   id: number
   title: string
-  status: 'past'|'current'|'upcoming'|null
+  status: 'past' | 'current' | 'upcoming' | null
 }
 type Category = {
   id: number
@@ -31,7 +30,7 @@ type OrderRow = {
   exhibition?: { title: string } | null
 }
 
-const currentEx = ref<Exhibition|null>(null)
+const currentEx = ref<Exhibition | null>(null)
 const cats = ref<Category[]>([])
 const qty = reactive<Record<number, number>>({}) // categoryId -> quantity
 const placing = ref(false)
@@ -39,6 +38,8 @@ const showHistory = ref(false)
 const history = ref<OrderRow[]>([])
 const message = ref('')
 const qr = ref('')
+
+const DRAFT_KEY = 'ticketsDraft_v1'
 
 const fetchData = async () => {
   loading.value = true
@@ -66,9 +67,59 @@ const fetchData = async () => {
   cats.value.forEach(cat => { if (!(cat.id in qty)) qty[cat.id] = 0 })
 
   loading.value = false
+
+  // спробувати відновити чернетку після того, як є currentEx та cats
+  restoreDraft()
+}
+
+// зберегти вибір у localStorage
+const saveDraft = () => {
+  if (typeof window === 'undefined') return
+  const payload = {
+    exhibitionId: currentEx.value?.id ?? null,
+    qty: Object.fromEntries(
+      Object.entries(qty)
+        .filter(([_, v]) => Number(v) > 0)
+        .map(([k, v]) => [k, Number(v)])
+    ),
+  }
+  if (!payload.exhibitionId && Object.keys(payload.qty).length === 0) {
+    localStorage.removeItem(DRAFT_KEY)
+    return
+  }
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(payload))
+}
+
+// відновити вибір із localStorage
+const restoreDraft = () => {
+  if (typeof window === 'undefined') return
+  const raw = localStorage.getItem(DRAFT_KEY)
+  if (!raw) return
+  try {
+    const parsed = JSON.parse(raw) as { exhibitionId: number | null; qty: Record<string, number> }
+    if (parsed.exhibitionId && currentEx.value && parsed.exhibitionId !== currentEx.value.id) {
+      // чернетка від іншої виставки — ігноруємо
+      return
+    }
+    Object.entries(parsed.qty).forEach(([key, val]) => {
+      const id = Number(key)
+      if (cats.value.some(c => c.id === id)) {
+        qty[id] = Number(val) || 0
+      }
+    })
+  } catch (e) {
+    console.error('Failed to restore tickets draft', e)
+  }
 }
 
 onMounted(fetchData)
+
+// оновлювати чернетку при зміні вибору
+watch(
+  () => ({ ...qty, exId: currentEx.value?.id ?? null }),
+  () => saveDraft(),
+  { deep: true }
+)
 
 // Підсумок по вибору (тільки ненульові рядки)
 const chosen = computed(() =>
@@ -83,11 +134,16 @@ const dec = (id: number) => { qty[id] = Math.max(0, Number(qty[id] || 0) - 1) }
 const setQty = (id: number, val: number) => { qty[id] = Math.max(0, Math.min(99, Math.floor(val || 0))) }
 
 const placeOrder = async () => {
-  if (!user.value) { return navigateTo('/login') }
   if (!currentEx.value) {
     return alert('Немає поточної виставки для оформлення замовлення.')
   }
   if (!chosen.value.length) return
+
+  // якщо користувач не залогінений — зберігаємо вибір і йдемо на login з next=/tickets
+  if (!user.value) {
+    saveDraft()
+    return navigateTo('/login?next=' + encodeURIComponent('/tickets'))
+  }
 
   placing.value = true
   try {
@@ -98,27 +154,26 @@ const placeOrder = async () => {
       quantity: r.quantity,
       amount: r.sum
     }))
-    const { data,  error } = await supabase.from('ticket_orders').insert(rows)
+    const { data, error } = await supabase.from('ticket_orders').insert(rows)
     if (error) throw error
     else {
-
       const url = await QRCode.toDataURL(`order:${user.value!.id}`)
-    
-    qr.value = url
-    message.value = 'Замовлення успішно створено.'
-  
+      qr.value = url
+      message.value = 'Замовлення успішно створено.'
     }
 
-    // Обнулити вибір
+    // Очистити вибір і чернетку
     cats.value.forEach(c => qty[c.id] = 0)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(DRAFT_KEY)
+    }
     await loadHistory()
     showHistory.value = true
-  } catch (e:any) {
+  } catch (e: any) {
     console.error(e)
     alert('Помилка під час оформлення замовлення.')
   } finally {
     placing.value = false
-
   }
 }
 
@@ -140,13 +195,13 @@ const toggleHistory = async () => {
   showHistory.value = !showHistory.value
 }
 
-const fmt = (v:number) => new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH' }).format(v || 0)
-const fmtDate = (s:string) => new Date(s).toLocaleString('uk-UA', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
+const fmt = (v: number) => new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH' }).format(v || 0)
+const fmtDate = (s: string) => new Date(s).toLocaleString('uk-UA', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 </script>
 
 <template>
   <div class="container page serif">
-    <v-skeleton-loader v-if="loading" type="article"></v-skeleton-loader>
+    <v-skeleton-loader v-if="loading" type="article" />
 
     <template v-else>
       <!-- Назва поточної виставки на всю ширину -->
@@ -214,10 +269,7 @@ const fmtDate = (s:string) => new Date(s).toLocaleString('uk-UA', { year:'numeri
             <div class="sum">{{ fmt(total) }}</div>
           </div>
 
-
-
-
-          <v-btn variant="tonal" class="mt" @click="toggleHistory">
+          <v-btn v-if="user" variant="tonal" class="mt" @click="toggleHistory">
             {{ showHistory ? 'Сховати історію ваших замовлень' : 'Показати історію ваших замовлень' }}
           </v-btn>
         </div>
@@ -261,34 +313,74 @@ const fmtDate = (s:string) => new Date(s).toLocaleString('uk-UA', { year:'numeri
 </template>
 
 <style scoped>
-.serif{ font-family: "Cormorant Garamond", serif; }
-.page{ padding-top:18px; padding-bottom:28px; }
-.title{ font-size: clamp(28px, 3.4vw, 44px); margin-bottom: 14px; }
+.serif {
+  font-family: "Cormorant Garamond", serif;
+}
 
-.layout{
+.page {
+  padding-top: 18px;
+  padding-bottom: 28px;
+}
+
+.title {
+  font-size: clamp(28px, 3.4vw, 44px);
+  margin-bottom: 14px;
+}
+
+.layout {
   display: grid;
   grid-template-columns: 1.1fr .9fr;
   gap: 20px;
   align-items: start;
 }
 
-.lead{ font-size: 18px; margin-bottom: 8px; }
-.tbl :deep(th){ font-weight:600; }
-.qty{ display:flex; align-items:center; gap:8px; }
-.qty-inp{ width: 80px; }
-
-.h{ font-size: 22px; margin-bottom: 8px; }
-.total{
-  display:flex; align-items:center; justify-content:space-between;
-  font-size: 18px; margin-top: 8px;
+.lead {
+  font-size: 18px;
+  margin-bottom: 8px;
 }
-.sum{ font-weight: 700; }
 
-.mt{ margin-top: 10px; }
+.tbl :deep(th) {
+  font-weight: 600;
+}
 
-.history{ margin-top: 20px; }
+.qty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-@media (max-width: 1000px){
-  .layout{ grid-template-columns: 1fr; }
+.qty-inp {
+  width: 80px;
+}
+
+.h {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 18px;
+  margin-top: 8px;
+}
+
+.sum {
+  font-weight: 700;
+}
+
+.mt {
+  margin-top: 10px;
+}
+
+.history {
+  margin-top: 20px;
+}
+
+@media (max-width: 1000px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
