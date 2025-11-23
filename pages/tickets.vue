@@ -114,12 +114,12 @@ const restoreDraft = () => {
 
 onMounted(fetchData)
 
-// оновлювати чернетку при зміні вибору
+/* // оновлювати чернетку при зміні вибору
 watch(
   () => ({ ...qty, exId: currentEx.value?.id ?? null }),
   () => saveDraft(),
   { deep: true }
-)
+) */
 
 // Підсумок по вибору (тільки ненульові рядки)
 const chosen = computed(() =>
