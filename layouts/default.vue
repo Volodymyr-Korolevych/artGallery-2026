@@ -15,7 +15,7 @@
 body {
   caret-color: transparent;
 }
-input {
+input, textarea {
   caret-color: auto;
 }
 .page-wrap{

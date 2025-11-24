@@ -38,7 +38,7 @@ const nav = [
 body {
   caret-color: transparent;
 }
-input {
+input, textarea {
   caret-color: auto;
 }
 .admin-shell {

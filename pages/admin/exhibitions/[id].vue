@@ -223,8 +223,9 @@ const saveArtwork = async () => {
       </div>
     </div>
 
-    <v-card class="pa-4" id="TELEPOR">
+    <v-card class="pa-4">
       <v-alert v-if="errorMsg" type="error" class="mb-4" density="compact">{{ errorMsg }}</v-alert>
+      <v-switch v-if="editMode" v-model="form.isPublished" label="Опубліковано" />
 
       <v-text-field v-model="form.title" :readonly="!editMode" label="Назва" />
       <v-select v-model="form.painterId" :items="artists" item-title="fullName" item-value="id" label="Художник"

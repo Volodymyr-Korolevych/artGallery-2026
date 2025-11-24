@@ -18,7 +18,7 @@ type Exhibition = {
   isPublished: boolean | null
 }
 type Artist = { id: number; fullName: string; slug: string }
-type Artwork = { id: number; title: string; imageUrl: string | null; slot: number }
+type Artwork = { id: number; title: string; year: number | null; description: string | null; imageUrl: string | null; slot: number }
 
 const loading = ref(true)
 const ex = ref<Exhibition | null>(null)
@@ -62,7 +62,7 @@ const fetchAll = async () => {
     if (e.status === 'past' || e.status === 'current') {
       const { data: aw } = await supabase
         .from('artworks')
-        .select('id,title,imageUrl,slot')
+        .select('id,title,year,description,imageUrl,slot')
         .eq('exhibitionId', e.id)
         .order('slot', { ascending: true })
         .limit(6)
@@ -125,10 +125,14 @@ const goArtist = () => { if (artist.value?.slug) navigateTo('/artists/' + artist
                 <div v-else class="placeholder">—</div>
               </div>
               <div class="caption">{{ a.title }}</div>
+              <div class="caption">{{ a.year }}</div>
+              <div class="caption">{{ a.description }}</div>
             </div>
             <!-- Якщо менше 6 — показуємо порожні слоти для рівної сітки -->
             <div v-for="n in (6 - artworks.length)" :key="'ph-'+n" class="cell muted">
-              <div class="img-frame"><div class="placeholder">—</div></div>
+              <div class="img-frame">
+                <div class="placeholder">—</div>
+              </div>
               <div class="caption"> </div>
             </div>
           </div>
