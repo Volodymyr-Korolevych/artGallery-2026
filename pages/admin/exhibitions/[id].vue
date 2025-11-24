@@ -14,6 +14,12 @@ const id = Number(route.params.id)
 const title = ref('Редагувати виставку')
 const artists = ref<any[]>([])
 const form = ref<any>(null)
+const statusItems = [
+  { value: 'past', label: 'Минула' },
+  { value: 'current', label: 'Поточна' },
+  { value: 'upcoming', label: 'Майбутня' },
+]
+
 const loading = ref(true)
 const saving = ref(false)
 const editMode = ref(true)
@@ -225,7 +231,13 @@ const saveArtwork = async () => {
 
     <v-card class="pa-4">
       <v-alert v-if="errorMsg" type="error" class="mb-4" density="compact">{{ errorMsg }}</v-alert>
-      <v-switch v-if="editMode" v-model="form.isPublished" label="Опубліковано" />
+
+
+      <div class="d-flex flex-wrap align-center gap-4 mb-2">
+        <v-select v-model="form.status" :items="statusItems" item-title="label" item-value="value" label="Статус"
+          :readonly="!editMode" class="status-select" style="max-width: 220px" />
+        <v-switch v-if="editMode" class="ml-8" v-model="form.isPublished" label="Опубліковано" />
+      </div>
 
       <v-text-field v-model="form.title" :readonly="!editMode" label="Назва" />
       <v-select v-model="form.painterId" :items="artists" item-title="fullName" item-value="id" label="Художник"

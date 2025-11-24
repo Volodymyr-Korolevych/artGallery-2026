@@ -51,7 +51,8 @@ const save = async () => {
       endDate: toISOorNull(form.value.endDate),
       coverUrl: null,
       cardUrl: null,
-      isPublished: false
+      isPublished: false,
+      status: 'upcoming'
     }
     const { data, error } = await supabase
       .from('exhibitions')
