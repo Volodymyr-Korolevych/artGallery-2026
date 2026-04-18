@@ -1,16 +1,13 @@
 <script setup lang="ts">
-// Головний корінь застосунку, як ти й сказала
 useHead({
   htmlAttrs: { lang: 'uk' }
 })
 </script>
 
 <template>
-  <v-app>
-    <v-main>
-      <NuxtLayout>
-        <NuxtPage />
-      </NuxtLayout>
-    </v-main>
-  </v-app>
+  <div class="min-h-screen bg-stone-50 flex flex-col">
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </div>
 </template>

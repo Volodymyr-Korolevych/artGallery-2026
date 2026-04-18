@@ -2,23 +2,15 @@
 definePageMeta({ layout: 'admin', middleware: 'admin-only' })
 const supabase = useSupabaseClient()
 
-const title = ref('Додати художника')
-const form = ref<{ fullName: string; description: string; birthYear: number | null; country: string }>(
-  { fullName: '', description: '', birthYear: null, country: '' }
-)
+const form = ref({ fullName:'', description:'', birthYear: null as number|null, country:'' })
 const saving = ref(false)
 const errorMsg = ref<string|null>(null)
 
-// Валідація року: 4 цифри, межі [1000..2100]
-const yearRules = [
-  (v: any) => v === null || v === '' || /^\d{4}$/.test(String(v)) || 'Введіть 4 цифри (рік)',
-  (v: any) => v === null || v === '' || (+v >= 1000 && +v <= 2100) || 'Рік має бути у межах 1000–2100',
-]
 const birthYearModel = computed({
   get: () => form.value.birthYear,
   set: (val: any) => {
-    if (val === '' || val === null) { form.value.birthYear = null; return }
-    const n = Number(String(val).replace(/\D/g, '').slice(0,4))
+    if (val===''||val===null) { form.value.birthYear = null; return }
+    const n = Number(String(val).replace(/\D/g,'').slice(0,4))
     form.value.birthYear = isNaN(n) ? null : n
   }
 })
@@ -34,84 +26,72 @@ const close = () => navigateTo('/admin/artists')
 
 const save = async () => {
   errorMsg.value = null
-  if (!form.value.fullName.trim()) { errorMsg.value = 'Вкажіть ім’я художника'; return }
+  if (!form.value.fullName.trim()) { errorMsg.value = "Вкажіть ім'я художника"; return }
   if (form.value.birthYear !== null) {
     const y = form.value.birthYear
     if (!/^\d{4}$/.test(String(y)) || y < 1000 || y > 2100) {
-      errorMsg.value = 'Рік має бути 4-значний, у межах 1000–2100'
-      return
+      errorMsg.value = 'Рік має бути 4-значний, у межах 1000–2100'; return
     }
   }
   saving.value = true
   try {
-    const { data, error } = await supabase
-      .from('artists')
-      .insert({
-        fullName: form.value.fullName.trim(),
-        description: form.value.description || '',
-        birthYear: form.value.birthYear,
-        country: form.value.country || '',
-        imageUrl: null
-      })
-      .select('id')
-      .single()
+    const { data, error } = await supabase.from('artists')
+      .insert({ fullName:form.value.fullName.trim(), description:form.value.description||'', birthYear:form.value.birthYear, country:form.value.country||'', imageUrl:null })
+      .select('id').single()
     if (error) throw error
-
-    // технічний slug
-    await supabase.from('artists')
-      .update({ slug: `artist-${data.id}` })
-      .eq('id', data.id)
-
-    navigateTo('/admin/artists/' + data.id)
-  } catch (e:any) {
-    errorMsg.value = e?.message || 'Помилка збереження'
-  } finally {
-    saving.value = false
-  }
+    await supabase.from('artists').update({ slug:`artist-${data.id}` }).eq('id', data.id)
+    navigateTo('/admin/artists/'+data.id)
+  } catch(e:any) { errorMsg.value = e?.message||'Помилка збереження' }
+  finally { saving.value = false }
 }
 </script>
 
 <template>
-  <div class="page">
-    <div class="head">
-      <h1 class="text-h5">{{ title }}</h1>
-      <div class="actions">
-        <v-btn variant="text" @click="close">Закрити</v-btn>
-        <v-btn color="primary" :loading="saving" @click="save">Зберегти</v-btn>
+  <div>
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="font-serif text-2xl font-semibold text-neutral-900">Новий художник</h1>
+      <div class="flex gap-3">
+        <button @click="close" class="btn-ghost text-xs">Скасувати</button>
+        <button :disabled="saving" @click="save" class="btn-primary text-xs">
+          {{ saving ? 'Збереження...' : 'Зберегти' }}
+        </button>
       </div>
     </div>
 
-    <v-card class="pa-4">
-      <v-alert v-if="errorMsg" type="error" density="compact" class="mb-3">{{ errorMsg }}</v-alert>
+    <div class="bg-white border border-neutral-100 p-6 space-y-5">
+      <div v-if="errorMsg" class="alert-error">{{ errorMsg }}</div>
 
-      <v-text-field v-model="form.fullName" label="Ім’я" />
-      <v-textarea v-model="form.description" label="Опис" auto-grow />
-      <div class="grid-2">
-        <v-text-field
-          :model-value="birthYearModel"
-          @update:model-value="birthYearModel = $event"
-          @blur="clampYear"
-          label="Рік народження"
-          type="text"
-          inputmode="numeric"
-          pattern="\\d{4}"
-          :rules="yearRules"
-          hint="4 цифри (1000–2100)"
-          persistent-hint
-        />
-        <v-text-field v-model="form.country" label="Країна" />
+      <div>
+        <label class="field-label">Повне ім'я</label>
+        <input v-model="form.fullName" type="text" class="field-input" placeholder="Прізвище Ім'я По-батькові" />
       </div>
 
-      <v-alert type="info" variant="tonal" density="compact" class="mt-2">
+      <div>
+        <label class="field-label">Опис</label>
+        <textarea v-model="form.description" rows="5" class="field-input resize-none" placeholder="Біографія та творчий шлях..."></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <label class="field-label">Рік народження</label>
+          <input
+            :value="birthYearModel"
+            @input="e => birthYearModel = (e.target as HTMLInputElement).value"
+            @blur="clampYear"
+            type="text" inputmode="numeric" maxlength="4"
+            class="field-input" placeholder="1970"
+          />
+          <div class="text-xs text-neutral-400 mt-1">4 цифри (1000–2100)</div>
+        </div>
+        <div>
+          <label class="field-label">Країна</label>
+          <input v-model="form.country" type="text" class="field-input" placeholder="Україна" />
+        </div>
+      </div>
+
+      <div class="alert-info text-xs">
         Портрет можна додати після створення — у режимі редагування.
-      </v-alert>
-    </v-card>
+      </div>
+    </div>
   </div>
 </template>
-
-<style scoped>
-.page { display: grid; gap: 12px; }
-.head { display:flex; align-items:center; justify-content:space-between; }
-.actions { display:flex; gap:8px; }
-.grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-</style>

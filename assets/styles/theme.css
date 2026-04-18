@@ -1,38 +1,127 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap&subset=cyrillic');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap&subset=cyrillic');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root{
-  --bg-page: #f7f7f8;
-  --fg-text: #0b0b0c;
-  --fg-muted: rgba(0,0,0,.65);
-  --brand: #1e40af;
-  --border-soft: rgba(0,0,0,.08);
+:root {
   --container-max: 1200px;
-  --container-pad: 20px;
+  --container-pad: clamp(20px, 4vw, 60px);
 }
 
-html, body{
-  background: var(--bg-page);
-  color: var(--fg-text);
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-size:16px;
+@layer base {
+
+  html,
+  body {
+    @apply bg-stone-50 text-neutral-900;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    @apply font-semibold tracking-wide;
+  }
 }
 
-.container{
-  max-width: var(--container-max);
-  margin: 0 auto;
-  padding-left: var(--container-pad);
-  padding-right: var(--container-pad);
-}
+@layer components {
+  .container {
+    max-width: var(--container-max);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--container-pad);
+    padding-right: var(--container-pad);
+  }
 
-h1, h2, h3, h4{
-  font-family: "Cormorant Garamond", serif;
-  font-weight:600;
-  letter-spacing: .5px;
-}
+  /* Кнопки — загальний стиль */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-2.5 bg-neutral-900 text-white text-sm font-medium tracking-wider uppercase transition-colors duration-200 hover:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
 
-.img-frame{
-  border:1px solid var(--border-soft);
-  border-radius:12px;
-  background:#fff;
-  overflow:hidden;
+  .btn-outline {
+    @apply inline-flex items-center justify-center px-6 py-2.5 border border-neutral-900 text-neutral-900 text-sm font-medium tracking-wider uppercase transition-colors duration-200 hover:bg-neutral-900 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center px-5 py-2 text-sm font-medium text-neutral-600 transition-colors duration-200 hover:text-neutral-900;
+  }
+
+  /* Картка */
+  .art-card {
+    @apply bg-white border border-neutral-100 overflow-hidden transition-shadow duration-300 hover:shadow-md;
+  }
+
+  /* Рамка для зображення */
+  .img-frame {
+    @apply bg-neutral-50 border border-neutral-100 overflow-hidden;
+  }
+
+  /* Бейдж статусу */
+  .status-badge {
+    @apply inline-block text-xs tracking-widest uppercase px-3 py-1 border border-current;
+  }
+
+  .status-badge.past {
+    @apply text-neutral-400 border-neutral-200;
+  }
+
+  .status-badge.current {
+    @apply text-amber-700 border-amber-300 bg-amber-50;
+  }
+
+  .status-badge.upcoming {
+    @apply text-emerald-700 border-emerald-300 bg-emerald-50;
+  }
+
+  /* Поля форми */
+  .field-input {
+    @apply w-full border-b border-neutral-300 bg-transparent py-2.5 text-sm text-neutral-900 placeholder-neutral-400 outline-none transition-colors focus:border-neutral-900;
+  }
+
+  .field-label {
+    @apply block text-xs tracking-widest uppercase text-neutral-500 mb-1;
+  }
+
+  /* Алерти */
+  .alert-info {
+    @apply bg-blue-50 border-l-2 border-blue-400 text-blue-800 px-4 py-3 text-sm;
+  }
+
+  .alert-success {
+    @apply bg-emerald-50 border-l-2 border-emerald-500 text-emerald-800 px-4 py-3 text-sm;
+  }
+
+  .alert-error {
+    @apply bg-red-50 border-l-2 border-red-400 text-red-800 px-4 py-3 text-sm;
+  }
+
+  /* Skeleton loader */
+  .skeleton {
+    @apply animate-pulse bg-neutral-200 rounded;
+  }
+
+  .skeleton-text {
+    @apply h-4 rounded skeleton;
+  }
+
+  .skeleton-img {
+    @apply rounded skeleton;
+  }
+
+  /* Роздільник */
+  .divider {
+    @apply w-8 h-px bg-amber-600 my-4;
+  }
+
+  /* Посилання-художник */
+  .artist-link {
+    @apply text-neutral-900 underline underline-offset-2 decoration-neutral-300 hover:decoration-neutral-900 cursor-pointer transition-all;
+  }
+
+  /* Навігація по сторінках */
+  .pager-btn {
+    @apply px-4 py-2 border border-neutral-200 text-sm text-neutral-600 hover:border-neutral-900 hover:text-neutral-900 transition-colors disabled:opacity-30 disabled:cursor-not-allowed;
+  }
 }

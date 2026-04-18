@@ -2,17 +2,12 @@
 definePageMeta({ layout: 'admin', middleware: 'admin-only' })
 const supabase = useSupabaseClient()
 
-const loading = ref(true)
-const errorMsg = ref<string|null>(null)
-const items = ref<Record<string, any>[]>([])
+const loading = ref(true); const errorMsg = ref<string|null>(null)
+const items = ref<Record<string,any>[]>([])
 
 const fetchAll = async () => {
-  loading.value = true
-  errorMsg.value = null
-  const { data, error } = await supabase
-    .from('contact_messages')
-    .select('id,"name","email","message","createdAt"')
-    .order('createdAt', { ascending: false })
+  loading.value = true; errorMsg.value = null
+  const { data, error } = await supabase.from('contact_messages').select('id,"name","email","message","createdAt"').order('createdAt',{ascending:false})
   if (error) errorMsg.value = error.message
   items.value = data || []
   loading.value = false
@@ -23,53 +18,44 @@ const fmtDate = (v:any) => {
   if (!v) return '—'
   try { return new Date(v).toLocaleString('uk-UA') } catch { return String(v) }
 }
-
-const close = () => navigateTo('/admin')
 </script>
 
 <template>
-  <div class="page">
-    <div class="head">
-      <h1 class="text-h5">Відгуки</h1>
-      <div class="actions">
-        <v-btn variant="text" @click="close">Закрити</v-btn>
-      </div>
+  <div>
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="font-serif text-2xl font-semibold text-neutral-900">Відгуки та повідомлення</h1>
+      <span class="text-xs text-neutral-400">{{ items.length }} записів</span>
     </div>
 
-    <v-alert v-if="errorMsg" type="error" density="compact" class="mb-3">{{ errorMsg }}</v-alert>
+    <div v-if="errorMsg" class="alert-error mb-4">{{ errorMsg }}</div>
 
-    <v-card>
-      <v-table density="comfortable">
+    <div class="bg-white border border-neutral-100 overflow-hidden">
+      <table class="w-full text-sm">
         <thead>
-          <tr>
-            <th style="width:70px">ID</th>
-            <th style="width:200px">Ім’я</th>
-            <th style="width:240px">Email</th>
-            <th>Повідомлення</th>
-            <th style="width:200px">Створено</th>
+          <tr class="border-b border-neutral-100">
+            <th class="text-left px-5 py-3 text-xs tracking-widest uppercase text-neutral-400 font-medium w-16">ID</th>
+            <th class="text-left px-5 py-3 text-xs tracking-widest uppercase text-neutral-400 font-medium w-40">Ім'я</th>
+            <th class="text-left px-5 py-3 text-xs tracking-widest uppercase text-neutral-400 font-medium w-52">Email</th>
+            <th class="text-left px-5 py-3 text-xs tracking-widest uppercase text-neutral-400 font-medium">Повідомлення</th>
+            <th class="text-left px-5 py-3 text-xs tracking-widest uppercase text-neutral-400 font-medium w-44">Дата</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="r in items" :key="r.id">
-            <td class="readonly">{{ r.id }}</td>
-            <td>{{ r.name }}</td>
-            <td>{{ r.email }}</td>
-            <td style="max-width:520px; white-space:pre-wrap">{{ r.message }}</td>
-            <td>{{ fmtDate(r.createdAt) }}</td>
+          <tr v-for="r in items" :key="r.id" class="border-b border-neutral-50 last:border-0 align-top hover:bg-neutral-50 transition-colors">
+            <td class="px-5 py-4 text-neutral-400">{{ r.id }}</td>
+            <td class="px-5 py-4 font-medium text-neutral-900">{{ r.name }}</td>
+            <td class="px-5 py-4 text-neutral-600">{{ r.email }}</td>
+            <td class="px-5 py-4 text-neutral-600 max-w-md whitespace-pre-wrap leading-relaxed">{{ r.message }}</td>
+            <td class="px-5 py-4 text-neutral-400 text-xs">{{ fmtDate(r.createdAt) }}</td>
           </tr>
-          <tr v-if="!loading && items.length===0">
-            <td colspan="5" class="muted">Поки немає відгуків</td>
+          <tr v-if="!loading && !items.length">
+            <td colspan="5" class="px-5 py-10 text-sm text-neutral-400 text-center italic">Поки немає відгуків</td>
+          </tr>
+          <tr v-if="loading">
+            <td colspan="5" class="px-5 py-10 text-sm text-neutral-400 text-center">Завантаження...</td>
           </tr>
         </tbody>
-      </v-table>
-    </v-card>
+      </table>
+    </div>
   </div>
 </template>
-
-<style scoped>
-.page { display: grid; gap: 12px; }
-.head { display:flex; align-items:center; justify-content:space-between; }
-.actions { display:flex; gap:8px; }
-.readonly { opacity: .75; }
-.muted { color: rgba(0,0,0,.5); text-align:center; padding: 16px; }
-</style>

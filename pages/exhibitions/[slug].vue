@@ -1,139 +1,90 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'default' })
+const route = useRoute(); const supabase = useSupabaseClient()
 
-const route = useRoute()
-const supabase = useSupabaseClient()
+type Exhibition = { id:number; slug:string; title:string; short:string|null; description:string|null; startDate:string|null; endDate:string|null; coverUrl:string|null; status:'past'|'current'|'upcoming'|null; painterId:number|null; isPublished:boolean|null }
+type Artist  = { id:number; fullName:string; slug:string }
+type Artwork = { id:number; title:string; year:number|null; description:string|null; imageUrl:string|null; slot:number }
 
-type Exhibition = {
-  id: number
-  slug: string
-  title: string
-  short: string | null
-  description: string | null
-  startDate: string | null
-  endDate: string | null
-  coverUrl: string | null
-  status: 'past' | 'current' | 'upcoming' | null
-  painterId: number | null
-  isPublished: boolean | null
-}
-type Artist = { id: number; fullName: string; slug: string }
-type Artwork = { id: number; title: string; year: number | null; description: string | null; imageUrl: string | null; slot: number }
+const loading = ref(true); const ex = ref<Exhibition|null>(null); const artist = ref<Artist|null>(null); const artworks = ref<Artwork[]>([])
 
-const loading = ref(true)
-const ex = ref<Exhibition | null>(null)
-const artist = ref<Artist | null>(null)
-const artworks = ref<Artwork[]>([])
-
-const statusLabel = (s: Exhibition['status']) =>
-  s === 'past' ? 'Минула' : s === 'current' ? 'Поточна' : s === 'upcoming' ? 'Майбутня' : ''
-
-const fmtRange = (s: string | null, e: string | null) => {
-  const toD = (v: string | null) => (v ? new Date(v) : null)
-  const sD = toD(s), eD = toD(e)
-  const f = (d: Date) => d.toLocaleDateString('uk-UA', { year: 'numeric', month: 'long', day: 'numeric' })
-  if (sD && eD) return `${f(sD)} — ${f(eD)}`
-  if (sD) return f(sD)
-  if (eD) return f(eD)
-  return ''
+const statusLabel = (s: Exhibition['status']) => s==='past'?'Минула':s==='current'?'Поточна':s==='upcoming'?'Майбутня':''
+const statusClass = (s: Exhibition['status']) => s==='current'?'current':s==='upcoming'?'upcoming':'past'
+const fmtRange = (s:string|null, e:string|null) => {
+  const toD=(v:string|null)=>(v?new Date(v):null)
+  const sD=toD(s),eD=toD(e)
+  const f=(d:Date)=>d.toLocaleDateString('uk-UA',{year:'numeric',month:'long',day:'numeric'})
+  if(sD&&eD) return `${f(sD)} — ${f(eD)}`
+  if(sD) return f(sD); if(eD) return f(eD); return ''
 }
 
 const fetchAll = async () => {
   loading.value = true
   const slug = String(route.params.slug)
-
-  const { data: e, error } = await supabase
-    .from('exhibitions')
-    .select('id,slug,title,short,description,coverUrl,status,"startDate","endDate","painterId","isPublished"')
-    .eq('slug', slug)
-    .maybeSingle()
-
+  const { data: e, error } = await supabase.from('exhibitions').select('id,slug,title,short,description,coverUrl,status,"startDate","endDate","painterId","isPublished"').eq('slug',slug).maybeSingle()
   if (!error && e) {
     ex.value = e as Exhibition
-
     if (e.painterId) {
-      const { data: a } = await supabase
-        .from('artists')
-        .select('id,"fullName",slug')
-        .eq('id', e.painterId).maybeSingle()
-      artist.value = (a as Artist) || null
+      const { data: a } = await supabase.from('artists').select('id,"fullName",slug').eq('id',e.painterId).maybeSingle()
+      artist.value = (a as Artist)||null
     }
-
-    if (e.status === 'past' || e.status === 'current') {
-      const { data: aw } = await supabase
-        .from('artworks')
-        .select('id,title,year,description,imageUrl,slot')
-        .eq('exhibitionId', e.id)
-        .order('slot', { ascending: true })
-        .limit(6)
-      artworks.value = (aw || []) as Artwork[]
-    } else {
-      artworks.value = []
-    }
-  } else {
-    ex.value = null
-  }
-
+    if (e.status==='past'||e.status==='current') {
+      const { data: aw } = await supabase.from('artworks').select('id,title,year,description,imageUrl,slot').eq('exhibitionId',e.id).order('slot',{ascending:true}).limit(6)
+      artworks.value = (aw||[]) as Artwork[]
+    } else { artworks.value = [] }
+  } else { ex.value = null }
   loading.value = false
 }
-
 onMounted(fetchAll)
-
-const goArtist = () => { if (artist.value?.slug) navigateTo('/artists/' + artist.value.slug) }
 </script>
 
 <template>
-  <div class="container page serif">
-    <v-skeleton-loader v-if="loading" type="image, article"></v-skeleton-loader>
+  <div>
+    <div v-if="loading" class="animate-pulse space-y-6">
+      <div class="h-[400px] bg-neutral-200 rounded"></div>
+      <div class="h-6 bg-neutral-100 rounded w-1/2"></div>
+      <div class="h-10 bg-neutral-200 rounded w-3/4"></div>
+    </div>
 
     <template v-else>
-      <v-alert v-if="!ex" type="error" variant="tonal" class="mb-4">
-        Виставку не знайдено.
-      </v-alert>
+      <div v-if="!ex" class="alert-error">Виставку не знайдено.</div>
 
       <div v-if="ex">
         <!-- Cover -->
-        <div class="img-frame mb-5" v-if="ex.coverUrl">
-          <v-img :src="ex.coverUrl" :alt="ex.title" height="420" contain />
+        <div class="img-frame overflow-hidden mb-10" v-if="ex.coverUrl">
+          <img :src="ex.coverUrl" :alt="ex.title" class="w-full max-h-[500px] object-contain bg-neutral-50" />
         </div>
 
         <!-- Meta -->
-        <div class="meta">
-          <div class="status" v-if="ex.status">{{ statusLabel(ex.status) }}</div>
-          <h1 class="title">{{ ex.title }}</h1>
+        <div class="max-w-2xl mb-10">
+          <span v-if="ex.status" :class="['status-badge mb-4 inline-block', statusClass(ex.status)]">{{ statusLabel(ex.status) }}</span>
+          <div class="divider mt-3"></div>
+          <h1 class="font-serif text-5xl lg:text-6xl font-semibold leading-tight text-neutral-900 mt-4 mb-4">{{ ex.title }}</h1>
 
-          <div class="artist" v-if="artist">
+          <div v-if="artist" class="text-sm text-neutral-500 mb-2">
             Художник:
-            <a class="artist-link" @click.prevent="goArtist">{{ artist.fullName }}</a>
+            <NuxtLink :to="'/artists/'+artist.slug" class="artist-link ml-1">{{ artist.fullName }}</NuxtLink>
           </div>
-
-          <div class="dates" v-if="ex.startDate || ex.endDate">
+          <div v-if="ex.startDate||ex.endDate" class="text-sm text-neutral-400 mb-6">
             {{ fmtRange(ex.startDate, ex.endDate) }}
           </div>
+          <div v-if="ex.description" class="text-base text-neutral-600 leading-relaxed" v-html="ex.description.replace(/\n/g,'<br/>')"></div>
         </div>
 
-        <!-- Full description -->
-        <div class="desc" v-if="ex.description" v-html="ex.description.replace(/\n/g,'<br/>')"></div>
-
-        <!-- Artworks grid (past/current only) -->
-        <div v-if="ex.status==='past' || ex.status==='current'" class="artworks">
-          <h2 class="h">Роботи з експозиції</h2>
-          <div class="grid">
-            <div v-for="a in artworks" :key="a.id" class="cell">
-              <div class="img-frame">
-                <v-img v-if="a.imageUrl" :src="a.imageUrl" :alt="a.title" height="220" contain />
-                <div v-else class="placeholder">—</div>
+        <!-- Artworks -->
+        <div v-if="ex.status==='past'||ex.status==='current'" class="mt-12">
+          <h2 class="font-serif text-3xl font-semibold text-neutral-900 mb-8">Роботи з експозиції</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div v-for="a in artworks" :key="a.id" class="art-card overflow-hidden">
+              <div class="img-frame aspect-[4/3] overflow-hidden">
+                <img v-if="a.imageUrl" :src="a.imageUrl" :alt="a.title" class="w-full h-full object-contain bg-neutral-50" />
+                <div v-else class="w-full h-full flex items-center justify-center text-neutral-300">—</div>
               </div>
-              <div class="caption">{{ a.title }}</div>
-              <div class="caption">{{ a.year }}</div>
-              <div class="caption">{{ a.description }}</div>
-            </div>
-            <!-- Якщо менше 6 — показуємо порожні слоти для рівної сітки -->
-            <div v-for="n in (6 - artworks.length)" :key="'ph-'+n" class="cell muted">
-              <div class="img-frame">
-                <div class="placeholder">—</div>
+              <div class="p-4 space-y-1">
+                <div class="font-serif text-base font-semibold text-neutral-900">{{ a.title }}</div>
+                <div v-if="a.year" class="text-xs text-neutral-400">{{ a.year }}</div>
+                <div v-if="a.description" class="text-sm text-neutral-500 leading-relaxed">{{ a.description }}</div>
               </div>
-              <div class="caption"> </div>
             </div>
           </div>
         </div>
@@ -141,46 +92,3 @@ const goArtist = () => { if (artist.value?.slug) navigateTo('/artists/' + artist
     </template>
   </div>
 </template>
-
-<style scoped>
-/* Уся сторінка — Cormorant Garamond */
-.serif { font-family: "Cormorant Garamond", serif; }
-
-.page { padding-top: 18px; padding-bottom: 28px; }
-.mb-5 { margin-bottom: 24px; }
-
-.meta { display: grid; gap: 6px; margin-bottom: 10px; }
-.status {
-  display: inline-block;
-  font-size: 14px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(0,0,0,.06);
-  color: rgba(0,0,0,.75);
-  width: fit-content;
-}
-.title { font-size: clamp(32px, 4vw, 54px); line-height: 1.1; margin-top: 2px; }
-.artist { font-size: 18px; }
-.artist-link { color: inherit; text-decoration: underline; cursor: pointer; }
-.dates { font-size: 16px; opacity: .8; }
-
-.desc { margin-top: 12px; font-size: 18px; line-height: 1.6; }
-
-.artworks { margin-top: 28px; }
-.h { font-size: 24px; margin-bottom: 12px; }
-.grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-.cell { display: grid; gap: 6px; }
-.placeholder {
-  height: 220px;
-  display:flex; align-items:center; justify-content:center;
-  color: rgba(0,0,0,.35);
-}
-.caption { font-size: 16px; }
-
-@media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 700px)  { .grid { grid-template-columns: 1fr; } }
-</style>

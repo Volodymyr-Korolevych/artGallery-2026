@@ -5,7 +5,6 @@ const supabase = useSupabaseClient()
 const { uploadArtistPortrait } = useStorageUpload()
 
 const id = Number(route.params.id)
-const title = ref('Редагувати художника')
 const form = ref<any>(null)
 const loading = ref(true)
 const saving  = ref(false)
@@ -13,17 +12,12 @@ const errorMsg = ref<string|null>(null)
 
 const close = () => navigateTo('/admin/artists')
 
-// валідація року як у /new
-const yearRules = [
-  (v: any) => v === null || v === '' || /^\d{4}$/.test(String(v)) || 'Введіть 4 цифри (рік)',
-  (v: any) => v === null || v === '' || (+v >= 1000 && +v <= 2100) || 'Рік має бути у межах 1000–2100',
-]
 const birthYearModel = computed({
   get: () => form.value?.birthYear ?? null,
   set: (val: any) => {
     if (!form.value) return
-    if (val === '' || val === null) { form.value.birthYear = null; return }
-    const n = Number(String(val).replace(/\D/g, '').slice(0,4))
+    if (val===''||val===null) { form.value.birthYear = null; return }
+    const n = Number(String(val).replace(/\D/g,'').slice(0,4))
     form.value.birthYear = isNaN(n) ? null : n
   }
 })
@@ -44,111 +38,99 @@ const onFile = async (e: Event) => {
     const url = await uploadArtistPortrait(form.value.id, f)
     form.value.imageUrl = url
     await supabase.from('artists').update({ imageUrl: url }).eq('id', form.value.id)
-  } catch (e:any) {
-    errorMsg.value = e?.message || 'Помилка завантаження зображення'
-  }
+  } catch(e:any) { errorMsg.value = e?.message||'Помилка завантаження зображення' }
 }
 
 const fetchOne = async () => {
   loading.value = true
-  const { data, error } = await supabase
-    .from('artists')
-    .select('id,"fullName",description,birthYear,country,imageUrl')
-    .eq('id', id).maybeSingle()
+  const { data, error } = await supabase.from('artists').select('id,"fullName",description,birthYear,country,imageUrl').eq('id', id).maybeSingle()
   if (error) errorMsg.value = error.message
   if (data) form.value = data
   loading.value = false
 }
-
 onMounted(fetchOne)
 
 const save = async () => {
   if (!form.value) return
   errorMsg.value = null
-
   if (form.value.birthYear !== null) {
     const y = form.value.birthYear
     if (!/^\d{4}$/.test(String(y)) || y < 1000 || y > 2100) {
-      errorMsg.value = 'Рік має бути 4-значний, у межах 1000–2100'
-      return
+      errorMsg.value = 'Рік має бути 4-значний, у межах 1000–2100'; return
     }
   }
-
   saving.value = true
   try {
-    const payload:any = {
-      fullName: form.value.fullName?.trim(),
-      description: form.value.description || '',
-      birthYear: form.value.birthYear,
-      country: form.value.country || '',
-      imageUrl: form.value.imageUrl || null
-    }
+    const payload:any = { fullName:form.value.fullName?.trim(), description:form.value.description||'', birthYear:form.value.birthYear, country:form.value.country||'', imageUrl:form.value.imageUrl||null }
     const { error } = await supabase.from('artists').update(payload).eq('id', id)
     if (error) throw error
-  } catch (e:any) {
-    errorMsg.value = e?.message || 'Помилка збереження'
-  } finally {
-    saving.value = false
-  }
+  } catch(e:any) { errorMsg.value = e?.message||'Помилка збереження' }
+  finally { saving.value = false }
 }
 </script>
 
 <template>
-  <div class="page" v-if="form">
-    <div class="head">
-      <h1 class="text-h5">{{ title }}</h1>
-      <div class="actions">
-        <v-btn variant="text" @click="close">Закрити</v-btn>
-        <v-btn color="primary" :loading="saving" @click="save">Зберегти</v-btn>
+  <div v-if="!loading && form">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="font-serif text-2xl font-semibold text-neutral-900">Редагувати художника</h1>
+      <div class="flex gap-3">
+        <button @click="close" class="btn-ghost text-xs">Закрити</button>
+        <button :disabled="saving" @click="save" class="btn-primary text-xs">
+          {{ saving ? 'Збереження...' : 'Зберегти' }}
+        </button>
       </div>
     </div>
 
-    <v-card class="pa-4">
-      <v-alert v-if="errorMsg" type="error" density="compact" class="mb-3">{{ errorMsg }}</v-alert>
+    <div class="bg-white border border-neutral-100 p-6 space-y-5">
+      <div v-if="errorMsg" class="alert-error">{{ errorMsg }}</div>
 
-      <v-text-field v-model="form.fullName" label="Ім’я" />
-      <v-textarea v-model="form.description" label="Опис" auto-grow />
-      <div class="grid-2">
-        <v-text-field
-          :model-value="birthYearModel"
-          @update:model-value="birthYearModel = $event"
-          @blur="clampYear"
-          label="Рік народження"
-          type="text"
-          inputmode="numeric"
-          pattern="\\d{4}"
-          :rules="yearRules"
-          hint="4 цифри (1000–2100)"
-          persistent-hint
-        />
-        <v-text-field v-model="form.country" label="Країна" />
+      <div>
+        <label class="field-label">Повне ім'я</label>
+        <input v-model="form.fullName" type="text" class="field-input" />
       </div>
 
-      <div class="image mt-4">
-        <div class="lbl">Портрет (фікс. висота 100px, пропорції збережені)</div>
-        <div class="row">
-          <v-btn variant="tonal" @click="pickFile">Оберіть файл</v-btn>
-          <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onFile" />
+      <div>
+        <label class="field-label">Опис</label>
+        <textarea v-model="form.description" rows="5" class="field-input resize-none"></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <label class="field-label">Рік народження</label>
+          <input
+            :value="birthYearModel"
+            @input="e => birthYearModel = (e.target as HTMLInputElement).value"
+            @blur="clampYear"
+            type="text" inputmode="numeric" maxlength="4"
+            class="field-input" placeholder="1970"
+          />
+          <div class="text-xs text-neutral-400 mt-1">4 цифри (1000–2100)</div>
         </div>
-        <v-img
-          v-if="form.imageUrl"
-          :src="form.imageUrl"
-          height="100"
-          contain
-          class="mt-2 rounded img-auto"
-        />
+        <div>
+          <label class="field-label">Країна</label>
+          <input v-model="form.country" type="text" class="field-input" />
+        </div>
       </div>
-    </v-card>
+
+      <!-- Portrait -->
+      <div>
+        <label class="field-label">Портрет</label>
+        <div class="flex items-start gap-4 mt-2">
+          <div>
+            <button @click="pickFile" class="btn-outline text-xs">Оберіть файл</button>
+            <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onFile" />
+          </div>
+          <img v-if="form.imageUrl" :src="form.imageUrl" class="h-24 object-contain border border-neutral-100" />
+          <div v-else class="h-24 w-24 bg-neutral-100 flex items-center justify-center font-serif text-3xl text-neutral-300">
+            {{ form.fullName?.[0] }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="loading" class="animate-pulse space-y-4">
+    <div class="h-8 bg-neutral-200 rounded w-1/3"></div>
+    <div class="h-64 bg-neutral-100 rounded"></div>
   </div>
 </template>
-
-<style scoped>
-.page { display: grid; gap: 12px; }
-.head { display:flex; align-items:center; justify-content:space-between; }
-.actions { display:flex; gap:8px; }
-.grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-.hidden { display:none; }
-.row { display:flex; align-items:center; gap:8px; }
-.img-auto { width: auto; }
-.lbl { font-size: 12px; opacity:.8; margin-bottom:4px; }
-</style>

@@ -1,85 +1,64 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'default' })
-const goTickets = () => navigateTo('/tickets')
-const goExhibitions = () => navigateTo('/exhibitions')
 </script>
 
 <template>
-  <div class="container about page">
-    <h1 class="title">Про нас</h1>
-
-    <div class="intro section">
-      <div class="text">
-        <p>
+  <div>
+    <!-- Hero -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center mb-16">
+      <div>
+        <div class="divider"></div>
+        <h1 class="font-serif text-5xl lg:text-6xl font-semibold leading-tight text-neutral-900 mb-6">
+          Про нас
+        </h1>
+        <p class="text-base text-neutral-600 leading-relaxed mb-4">
           Art Gallery — це простір сучасного та класичного мистецтва, де тимчасові експозиції змінюють одна одну,
           а кожна виставка має власну історію. Ми працюємо з художниками, кураторами та спільнотою, щоби показувати
           найцікавіші події мистецького життя у доступному форматі.
         </p>
-        <p class="muted">
+        <p class="text-sm text-neutral-500 leading-relaxed mb-8">
           Наша місія — створювати місце зустрічі глядача й мистецтва: виставки, кураторські екскурсії, лекції,
           зустрічі з авторами та освітні програми.
         </p>
-        <div class="cta">
-          <v-btn color="primary" class="mr-2" @click="goExhibitions">Переглянути виставки</v-btn>
-          <v-btn variant="tonal" @click="goTickets">Придбати квитки</v-btn>
+        <div class="flex flex-wrap gap-3">
+          <NuxtLink to="/exhibitions" class="btn-primary text-xs">Переглянути виставки</NuxtLink>
+          <NuxtLink to="/tickets" class="btn-outline text-xs">Придбати квитки</NuxtLink>
         </div>
       </div>
-      <div class="image img-frame">
-        <v-img
-          src="/img/about.png"
-          alt="Виставковий простір"
-          height="360"
-          contain
-        />
+
+      <div class="img-frame overflow-hidden">
+        <img src="/img/about.png" alt="Виставковий простір" class="w-full h-80 lg:h-96 object-contain bg-neutral-50" />
       </div>
     </div>
 
-    <div class="grid section">
-      <v-card class="pa-4">
-        <h2 class="h">Години роботи</h2>
-        <p>Вт–Нд: 11:00–19:00</p>
-        <p>Пн: вихідний</p>
-      </v-card>
+    <!-- Info cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+      <div class="border border-neutral-100 bg-white p-7">
+        <div class="text-xs tracking-widest uppercase text-neutral-400 mb-3">Години роботи</div>
+        <div class="divider"></div>
+        <p class="font-serif text-lg text-neutral-900 mt-3">Вт–Нд: 11:00–19:00</p>
+        <p class="text-sm text-neutral-500 mt-1">Понеділок — вихідний</p>
+      </div>
 
-      <v-card class="pa-4">
-        <h2 class="h">Адреса</h2>
-        <p>вул. Прикладна, 10, Львів</p>
-        <p class="muted">Вхід з внутрішнього двору</p>
-      </v-card>
+      <div class="border border-neutral-100 bg-white p-7">
+        <div class="text-xs tracking-widest uppercase text-neutral-400 mb-3">Адреса</div>
+        <div class="divider"></div>
+        <p class="font-serif text-lg text-neutral-900 mt-3">вул. Прикладна, 10</p>
+        <p class="text-sm text-neutral-500 mt-1">Львів · Вхід з внутрішнього двору</p>
+      </div>
 
-      <v-card class="pa-4">
-        <h2 class="h">Події</h2>
-        <p>Екскурсії щосуботи, авторські зустрічі — щомісяця.</p>
-      </v-card>
+      <div class="border border-neutral-100 bg-white p-7">
+        <div class="text-xs tracking-widest uppercase text-neutral-400 mb-3">Події</div>
+        <div class="divider"></div>
+        <p class="font-serif text-lg text-neutral-900 mt-3">Щосуботи — екскурсії</p>
+        <p class="text-sm text-neutral-500 mt-1">Авторські зустрічі — щомісяця</p>
+      </div>
     </div>
 
-    <div class="section">
-      <v-alert type="info" variant="tonal">
-        Для групових відвідувань або освіти напишіть у розділі <NuxtLink to="/contacts">Контакти</NuxtLink>.
-      </v-alert>
+    <!-- Note -->
+    <div class="alert-info">
+      Для групових відвідувань або освітніх програм зверніться у розділі
+      <NuxtLink to="/contacts" class="underline underline-offset-2 font-medium ml-1">Контакти</NuxtLink>.
     </div>
   </div>
 </template>
-
-<style scoped>
-.page { padding-top: 18px; padding-bottom: 28px; }
-.title { font-size: clamp(32px, 4vw, 48px); margin-bottom: 12px; }
-.intro {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 24px;
-  align-items: center;
-}
-.cta { margin-top: 8px; }
-.grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-.h { font-size: 18px; margin-bottom: 6px; }
-.image :deep(img) { object-fit: contain; }
-@media (max-width: 1100px) {
-  .intro { grid-template-columns: 1fr; }
-  .grid { grid-template-columns: 1fr; }
-}
-</style>

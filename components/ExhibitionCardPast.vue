@@ -2,53 +2,44 @@
 const props = defineProps<{
   slug: string
   title: string
-  startDate: string|null
-  endDate: string|null
-  cardUrl: string|null
+  startDate: string | null
+  endDate: string | null
+  cardUrl: string | null
   artist?: { fullName: string; slug: string } | null
 }>()
-const go = (p:string) => navigateTo(p)
-const goArtist = () => { if (props.artist?.slug) go('/artists/'+props.artist.slug) }
-const goDetails = () => go('/exhibitions/'+props.slug)
 
-const fmtRange = (s: string|null, e: string|null) => {
-  const toD = (v:string|null)=> v? new Date(v):null
-  const f = (d:Date)=> d.toLocaleDateString('uk-UA',{year:'numeric',month:'long',day:'numeric'})
+const fmtRange = (s: string | null, e: string | null) => {
+  const toD = (v: string | null) => v ? new Date(v) : null
+  const f = (d: Date) => d.toLocaleDateString('uk-UA', { year: 'numeric', month: 'long', day: 'numeric' })
   const sd = toD(s), ed = toD(e)
-  if(sd && ed) return `${f(sd)} — ${f(ed)}`
-  if(sd) return f(sd)
-  if(ed) return f(ed)
+  if (sd && ed) return `${f(sd)} — ${f(ed)}`
+  if (sd) return f(sd)
+  if (ed) return f(ed)
   return ''
 }
 </script>
 
 <template>
-  <v-card class="xcard">
-    <div class="img-frame">
-      <v-img v-if="cardUrl" :src="cardUrl" :alt="title" height="220" contain />
-      <div v-else class="ph">Зображення відсутнє</div>
-    </div>
-    <div class="body serif">
-      <div class="dates">{{ fmtRange(startDate, endDate) }}</div>
-      <h3 class="title">{{ title }}</h3>
-      <div class="artist" v-if="artist">
-        Художник: <a class="a" @click.prevent="goArtist">{{ artist.fullName }}</a>
-      </div>
-      <div class="actions">
-        <v-btn color="primary" @click="goDetails">Детальніше</v-btn>
+  <div class="art-card group flex flex-col">
+    <div class="img-frame aspect-[3/2] overflow-hidden">
+      <img v-if="cardUrl" :src="cardUrl" :alt="title"
+        class="w-full h-full object-contain bg-neutral-50 transition-transform duration-500 group-hover:scale-[1.02]" />
+      <div v-else class="w-full h-full flex items-center justify-center text-neutral-300 text-sm">
+        Зображення відсутнє
       </div>
     </div>
-  </v-card>
-</template>
 
-<style scoped>
-.xcard{ display:grid; gap:10px; padding:12px; }
-.ph{ height:220px; display:flex; align-items:center; justify-content:center; color:rgba(0,0,0,.45) }
-.body{ display:grid; gap:6px; }
-.serif { font-family: "Cormorant Garamond", serif; }
-.title{ font-size:20px; line-height:1.25; }
-.dates{ font-size:14px; opacity:.8; }
-.artist{ font-size:15px; }
-.a{ color:inherit; text-decoration:underline; cursor:pointer; }
-.actions{ margin-top:6px; }
-</style>
+    <div class="p-4 flex flex-col gap-1.5 flex-1">
+      <div class="text-xs text-neutral-400 font-sans">{{ fmtRange(startDate, endDate) }}</div>
+      <h3 class="font-serif text-lg font-semibold leading-snug text-neutral-900">{{ title }}</h3>
+      <div v-if="artist" class="text-xs text-neutral-500 font-sans">
+        <NuxtLink :to="'/artists/' + artist.slug" class="artist-link">{{ artist.fullName }}</NuxtLink>
+      </div>
+      <div class="mt-auto pt-3">
+        <NuxtLink :to="'/exhibitions/' + slug" class="btn-ghost text-xs px-0 py-1 underline underline-offset-2">
+          Детальніше →
+        </NuxtLink>
+      </div>
+    </div>
+  </div>
+</template>

@@ -1,73 +1,40 @@
 <script setup lang="ts">
-// Головна: поточна експозиція (герой-блок) + навігаційні "таби": Минулі / Поточна / Майбутні
-// Вимоги: ліворуч 1/3 — назва, короткий опис, художник (лінк), кнопки;
-// праворуч 2/3 — зображення (coverUrl), contain, фіксована висота hero.
-// "Поточна" виділена, інші клікабельні.  [ТЗ: Головне меню/UI вимоги]
 const supabase = useSupabaseClient()
 
 type Exhibition = {
-  id: number
-  title: string
-  slug: string
-  short: string | null
-  description: string | null
-  startDate: string | null
-  endDate: string | null
-  coverUrl: string | null
-  status: 'current' | 'past' | 'upcoming' | null
-  painterId: number | null
-  isPublished: boolean | null
+  id: number; title: string; slug: string; short: string|null; description: string|null
+  startDate: string|null; endDate: string|null; coverUrl: string|null
+  status: 'current'|'past'|'upcoming'|null; painterId: number|null; isPublished: boolean|null
 }
-type Artist = {
-  id: number
-  fullName: string
-  slug: string
-}
+type Artist = { id: number; fullName: string; slug: string }
 
 const loading = ref(true)
-const ex = ref<Exhibition | null>(null)
-const artist = ref<Artist | null>(null)
+const ex = ref<Exhibition|null>(null)
+const artist = ref<Artist|null>(null)
 
 const fetchCurrent = async () => {
   loading.value = true
-  // Поточна експозиція: статус = 'current' і isPublished = true
   const { data, error } = await supabase
     .from('exhibitions')
     .select('id,title,slug,short,description,coverUrl,status,"startDate","endDate","painterId","isPublished"')
-    .eq('status', 'current')
-    .eq('isPublished', true)
-    .order('startDate', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+    .eq('status', 'current').eq('isPublished', true)
+    .order('startDate', { ascending: false }).limit(1).maybeSingle()
   if (!error && data) {
     ex.value = data as Exhibition
     if (data.painterId) {
-      const { data: a } = await supabase
-        .from('artists')
-        .select('id,"fullName",slug')
-        .eq('id', data.painterId)
-        .maybeSingle()
+      const { data: a } = await supabase.from('artists').select('id,"fullName",slug').eq('id', data.painterId).maybeSingle()
       artist.value = (a as Artist) || null
     }
-  } else {
-    ex.value = null
-  }
+  } else { ex.value = null }
   loading.value = false
 }
 
 onMounted(fetchCurrent)
 
-const goPast = () => navigateTo('/exhibitions/past')
-const goCurrent = () => {} // вже тут
-const goUpcoming = () => navigateTo('/exhibitions/upcoming')
-const goDetails = () => { if (ex.value?.slug) navigateTo('/exhibitions/' + ex.value.slug) }
-const goTickets = () => navigateTo('/tickets')
-const goArtist = () => { if (artist.value?.slug) navigateTo('/artists/' + artist.value.slug) }
-
-const fmtRange = (s: string | null, e: string | null) => {
-  const d = (v: string | null) => (v ? new Date(v) : null)
+const fmtRange = (s: string|null, e: string|null) => {
+  const d = (v: string|null) => (v ? new Date(v) : null)
   const sD = d(s), eD = d(e)
-  const f = (dt: Date) => dt.toLocaleDateString('uk-UA', { year: 'numeric', month: 'long', day: 'numeric' })
+  const f = (dt: Date) => dt.toLocaleDateString('uk-UA', { year:'numeric', month:'long', day:'numeric' })
   if (sD && eD) return `${f(sD)} — ${f(eD)}`
   if (sD) return f(sD)
   if (eD) return f(eD)
@@ -76,82 +43,96 @@ const fmtRange = (s: string | null, e: string | null) => {
 </script>
 
 <template>
-  <div class="page container">
-    <!-- Навігаційні "таби": Минулі / Поточна / Майбутні -->
-    <div class="tabs">
-      <button class="tab" @click="goPast">Минулі</button>
-      <button class="tab active" @click="goCurrent">Поточна</button>
-      <button class="tab" @click="goUpcoming">Майбутні</button>
-    </div>
-
-    <v-skeleton-loader v-if="loading" type="image, article"></v-skeleton-loader>
-
-    <div v-else>
-      <v-alert v-if="!ex" type="info" variant="tonal" class="mb-4">
-        Зараз немає позначеної поточної експозиції. Перейдіть до розділів «Минулі» або «Майбутні».
-      </v-alert>
-
-      <div v-if="ex" class="hero">
-        <!-- Ліва колонка (1/3) -->
-        <div class="left">
-          <h1 class="title">{{ ex.title }}</h1>
-          <div v-if="ex.startDate || ex.endDate" class="dates">{{ fmtRange(ex.startDate, ex.endDate) }}</div>
-
-          <div class="short" v-if="ex.short">{{ ex.short }}</div>
-
-          <div class="artist" v-if="artist">
-            Художник:
-            <a class="artist-link" @click.prevent="goArtist">{{ artist.fullName }}</a>
-          </div>
-
-          <div class="cta">
-            <v-btn color="primary" @click="goDetails">Детальніше</v-btn>
-            <v-btn variant="tonal" class="ml-2" @click="goTickets">Придбати квитки</v-btn>
-          </div>
+  <div class="min-h-screen flex flex-col">
+    <main class="flex-1">
+      <!-- Tab nav -->
+      <div class="border-b border-neutral-100 bg-white">
+        <div class="container flex gap-0">
+          <NuxtLink
+            to="/exhibitions/past"
+            class="px-6 py-4 text-xs tracking-widest uppercase text-neutral-400 hover:text-neutral-900 border-b-2 border-transparent hover:border-neutral-300 transition-all"
+          >Минулі</NuxtLink>
+          <button
+            class="px-6 py-4 text-xs tracking-widest uppercase text-neutral-900 border-b-2 border-neutral-900 font-medium"
+          >Поточна</button>
+          <NuxtLink
+            to="/exhibitions/upcoming"
+            class="px-6 py-4 text-xs tracking-widest uppercase text-neutral-400 hover:text-neutral-900 border-b-2 border-transparent hover:border-neutral-300 transition-all"
+          >Майбутні</NuxtLink>
         </div>
+      </div>
 
-        <!-- Права колонка (2/3) -->
-        <div class="right">
-          <div class="imgWrap img-frame" v-if="ex.coverUrl">
-            <v-img :src="ex.coverUrl" :alt="ex.title" class="hero-img" height="520" contain />
+      <!-- Loading -->
+      <div v-if="loading" class="container py-16">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-16 items-center">
+          <div class="lg:col-span-2 space-y-4">
+            <div class="skeleton-text w-2/3 h-3"></div>
+            <div class="skeleton h-12 w-full rounded"></div>
+            <div class="skeleton h-12 w-4/5 rounded"></div>
+            <div class="skeleton-text w-1/2 h-3"></div>
+            <div class="skeleton-text w-3/4 h-3"></div>
           </div>
-          <div v-else class="imgPlaceholder">
-            Обкладинка відсутня
+          <div class="lg:col-span-3 skeleton-img h-[480px] rounded"></div>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div v-else-if="!ex" class="container py-16">
+        <div class="alert-info max-w-lg">
+          Зараз немає позначеної поточної експозиції. Перейдіть до розділів «Минулі» або «Майбутні».
+        </div>
+      </div>
+
+      <!-- Hero -->
+      <div v-else class="container py-12 lg:py-16">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-16 items-center">
+
+          <!-- Left: info -->
+          <div class="lg:col-span-2 flex flex-col gap-5">
+            <div>
+              <div class="divider"></div>
+              <div class="text-xs tracking-widest uppercase text-neutral-400 mb-3">Поточна експозиція</div>
+              <h1 class="font-serif text-4xl lg:text-5xl xl:text-6xl font-semibold leading-[1.05] text-neutral-900">
+                {{ ex.title }}
+              </h1>
+            </div>
+
+            <div v-if="ex.startDate || ex.endDate" class="text-sm text-neutral-500 font-sans">
+              {{ fmtRange(ex.startDate, ex.endDate) }}
+            </div>
+
+            <p v-if="ex.short" class="text-base text-neutral-600 leading-relaxed">{{ ex.short }}</p>
+
+            <div v-if="artist" class="text-sm text-neutral-500 font-sans">
+              Художник:
+              <NuxtLink :to="'/artists/' + artist.slug" class="artist-link ml-1">{{ artist.fullName }}</NuxtLink>
+            </div>
+
+            <div class="flex flex-wrap gap-3 mt-2">
+              <NuxtLink :to="'/exhibitions/' + ex.slug" class="btn-primary text-xs">
+                Детальніше
+              </NuxtLink>
+              <NuxtLink to="/tickets" class="btn-outline text-xs">
+                Придбати квитки
+              </NuxtLink>
+            </div>
+          </div>
+
+          <!-- Right: image -->
+          <div class="lg:col-span-3 order-first lg:order-last">
+            <div class="img-frame overflow-hidden" v-if="ex.coverUrl">
+              <img
+                :src="ex.coverUrl"
+                :alt="ex.title"
+                class="w-full max-h-[540px] object-contain bg-neutral-50"
+              />
+            </div>
+            <div v-else class="img-frame h-[480px] flex items-center justify-center text-neutral-300 text-sm">
+              Обкладинка відсутня
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   </div>
 </template>
-
-<style scoped>
-.page { display: grid; gap: 24px; }
-.tabs { display:flex; justify-content:center; gap:24px; margin-top:8px; }
-.tab {
-  background: transparent; border: 0; padding: 4px 8px; cursor: pointer; font-weight: 600; opacity: .75;
-}
-.tab:hover { opacity: 1; }
-.tab.active { color: #1e40af; opacity: 1; } /* акцентний синій */
-
-.hero { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; align-items: center; }
-.left { display: grid; gap: 16px; }
-.title { font-size: clamp(28px, 3.2vw, 44px); line-height: 1.1; }
-.dates { opacity: .75; }
-.short { font-size: 16px; line-height: 1.5; }
-.artist { font-size: 15px; }
-.artist-link { color: inherit; text-decoration: underline; cursor: pointer; }
-.cta { display: flex; align-items: center; }
-
-.right { display:flex; justify-content: flex-end; }
-.imgWrap { width: 100%; display:flex; justify-content: flex-end; }
-.hero-img { width: 100%; max-height: 520px; }
-.imgPlaceholder {
-  height: 520px; width: 100%; display:flex; align-items:center; justify-content:center;
-  border: 1px dashed rgba(0,0,0,.2); border-radius: 12px; color: rgba(0,0,0,.5);
-}
-
-@media (max-width: 1200px) {
-  .hero { grid-template-columns: 1fr; }
-  .right { order: -1; } /* як у референсі, дозволяє назві перекривати зображення на деяких ширинах */
-}
-</style>

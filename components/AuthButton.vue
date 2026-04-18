@@ -10,16 +10,10 @@ const onLogout = async () => {
 
 <template>
   <div>
-    <v-btn v-if="!user" to="/login" variant="flat" color="primary">Увійти</v-btn>
-    <v-menu v-else>
-      <template #activator="{ props }">
-        <v-btn v-bind="props" color="primary" variant="flat">{{ user?.email }}</v-btn>
-      </template>
-      <v-list>
-        <v-list-item to="/profile">Профіль</v-list-item>
-        <v-list-item to="/admin">Адмінка</v-list-item>
-        <v-list-item @click="onLogout">Вийти</v-list-item>
-      </v-list>
-    </v-menu>
+    <NuxtLink v-if="!user" to="/login" class="btn-primary text-xs">Увійти</NuxtLink>
+    <div v-else class="flex items-center gap-3">
+      <span class="text-sm text-neutral-600">{{ user?.email }}</span>
+      <button @click="onLogout" class="btn-outline text-xs px-4 py-1.5">Вийти</button>
+    </div>
   </div>
 </template>
