@@ -4,6 +4,7 @@ import QRCode from 'qrcode'
 
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
+const route = useRoute()
 const loading = ref(true)
 
 type Exhibition = { id: number; title: string; status: 'past'|'current'|'upcoming'|null }
@@ -25,7 +26,9 @@ const fetchData = async () => {
   cats.value = (c || []) as Category[]
   cats.value.forEach(cat => { if (!(cat.id in qty)) qty[cat.id] = 0 })
   loading.value = false
-  restoreDraft()
+  if (route.query.restoreDraft === '1') {
+    restoreDraft()
+  }
 }
 
 const saveDraft = () => {
@@ -40,13 +43,19 @@ const restoreDraft = () => {
   const raw = localStorage.getItem(DRAFT_KEY)
   if (!raw) return
   try {
-    const parsed = JSON.parse(raw) as { exhibitionId: number|null; qty: Record<string, number> }
+    const parsed = JSON.parse(raw) as { exhibitionId: number | null; qty: Record<string, number> }
     if (parsed.exhibitionId && currentEx.value && parsed.exhibitionId !== currentEx.value.id) return
+
     Object.entries(parsed.qty).forEach(([key, val]) => {
       const id = Number(key)
       if (cats.value.some(c => c.id === id)) qty[id] = Number(val) || 0
     })
-  } catch(e) { console.error('Failed to restore draft', e) }
+
+    // прибрати restoreDraft=1 з адреси після відновлення
+    navigateTo('/tickets', { replace: true })
+  } catch (e) {
+    console.error('Failed to restore draft', e)
+  }
 }
 
 onMounted(fetchData)
@@ -60,7 +69,10 @@ const setQty = (id:number, val:number) => { qty[id] = Math.max(0, Math.min(99, M
 const placeOrder = async () => {
   if (!currentEx.value) { alert('Немає поточної виставки для оформлення замовлення.'); return }
   if (!chosen.value.length) return
-  if (!user.value) { saveDraft(); return navigateTo('/login?next='+encodeURIComponent('/tickets')) }
+  if (!user.value) {
+    saveDraft()
+    return navigateTo('/login?next=' + encodeURIComponent('/tickets?restoreDraft=1'))
+  }
   placing.value = true
   try {
     const rows = chosen.value.map(r => ({ userId: user.value!.id, exhibitionId: currentEx.value!.id, categoryId: r.id, quantity: r.quantity, amount: r.sum }))
@@ -213,7 +225,7 @@ const fmtDate = (s:string) => new Date(s).toLocaleString('uk-UA', { year:'numeri
       <!-- Not logged in -->
       <div v-if="!user" class="alert-info mt-8">
         Щоби оформити замовлення та переглядати історію,
-        <NuxtLink to="/login" class="underline underline-offset-2 font-medium ml-1">увійдіть</NuxtLink>.
+        <span @click="placeOrder" class="underline underline-offset-2 font-medium ml-1">увійдіть</span>.
       </div>
     </template>
   </div>

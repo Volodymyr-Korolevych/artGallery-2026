@@ -35,6 +35,9 @@ const handleOutsideClick = (e: MouseEvent) => {
 watch(user, () => fetchProfile())
 
 const logout = async () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('ticketsDraft_v1')
+  }
   await supabase.auth.signOut()
   profile.value = null
   menuOpen.value = false
