@@ -7,7 +7,7 @@ const route = useRoute()
 
 const email = ref(''); const password = ref(''); const username = ref('')
 const err = ref(''); const loading = ref(false)
-const tab = ref<'signin'|'signup'>('signin')
+const tab = ref<'signin' | 'signup'>('signin')
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const isValidEmail = computed(() => emailRegex.test(email.value))
@@ -62,42 +62,57 @@ const signUp = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-stone-50 flex items-center justify-center px-4">
+  <div class="min-h-screen bg-[var(--color-bg)] flex items-center justify-center px-4 py-10 md:py-14">
     <div class="w-full max-w-md">
       <!-- Logo -->
-      <div class="text-center mb-10">
-        <NuxtLink to="/" class="font-serif text-3xl font-semibold text-neutral-900 tracking-wider">
+      <div class="text-center mb-8 md:mb-10">
+        <NuxtLink to="/"
+          class="font-serif text-[2rem] md:text-[2.25rem] font-semibold text-[var(--color-text)] tracking-[0.08em] hover:text-[var(--color-accent)] transition-colors">
           Art Gallery
         </NuxtLink>
         <div class="divider mx-auto mt-3"></div>
       </div>
 
-      <div class="bg-white border border-neutral-100 p-8 lg:p-10">
+      <div class="art-card bg-[var(--color-surface)]">
         <!-- Tabs -->
-        <div class="flex gap-0 border-b border-neutral-100 mb-8">
-          <button
-            @click="tab = 'signin'"
-            class="flex-1 pb-3 text-xs tracking-widest uppercase transition-colors"
-            :class="tab === 'signin' ? 'text-neutral-900 border-b-2 border-neutral-900 -mb-px font-medium' : 'text-neutral-400 hover:text-neutral-600'"
-          >Увійти</button>
-          <button
-            @click="tab = 'signup'"
-            class="flex-1 pb-3 text-xs tracking-widest uppercase transition-colors"
-            :class="tab === 'signup' ? 'text-neutral-900 border-b-2 border-neutral-900 -mb-px font-medium' : 'text-neutral-400 hover:text-neutral-600'"
-          >Зареєструватися</button>
+        <div class="flex border-b border-[var(--color-line)] bg-[var(--color-surface-soft)]">
+          <button @click="tab = 'signin'"
+            class="flex-1 px-4 py-4 text-[11px] tracking-[0.16em] uppercase transition-colors" :class="tab === 'signin'
+              ? 'text-[var(--color-text)] border-b border-[var(--color-accent)] -mb-px font-medium bg-[var(--color-surface)]'
+              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'">
+            Увійти
+          </button>
+
+          <button @click="tab = 'signup'"
+            class="flex-1 px-4 py-4 text-[11px] tracking-[0.16em] uppercase transition-colors" :class="tab === 'signup'
+              ? 'text-[var(--color-text)] border-b border-[var(--color-accent)] -mb-px font-medium bg-[var(--color-surface)]'
+              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'">
+            Зареєструватися
+          </button>
         </div>
 
         <!-- Sign In -->
-        <div v-if="tab === 'signin'" class="space-y-5">
+        <div v-if="tab === 'signin'" class="p-6 md:p-8 space-y-5">
+          <div class="mb-1">
+            <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] mb-4">
+              Вхід до кабінету
+            </div>
+          </div>
+
           <div>
             <label class="field-label">Email</label>
             <input v-model="email" type="email" class="field-input" placeholder="your@email.com" />
           </div>
+
           <div>
             <label class="field-label">Пароль</label>
             <input v-model="password" type="password" class="field-input" placeholder="••••••••" />
           </div>
-          <div v-if="err" class="alert-error">{{ err }}</div>
+
+          <div v-if="err" class="alert-error">
+            {{ err }}
+          </div>
+
           <button :disabled="loading" @click="signIn" class="btn-primary text-xs w-full justify-center mt-2">
             <span v-if="loading">Зачекайте...</span>
             <span v-else>Увійти</span>
@@ -105,20 +120,32 @@ const signUp = async () => {
         </div>
 
         <!-- Sign Up -->
-        <div v-else class="space-y-5">
+        <div v-else class="p-6 md:p-8 space-y-5">
+          <div class="mb-1">
+            <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] mb-4">
+              Створення акаунта
+            </div>
+          </div>
+
           <div>
             <label class="field-label">Email</label>
             <input v-model="email" type="email" class="field-input" placeholder="your@email.com" />
           </div>
+
           <div>
             <label class="field-label">Ім'я</label>
             <input v-model="username" type="text" class="field-input" placeholder="Ваше ім'я" />
           </div>
+
           <div>
             <label class="field-label">Пароль</label>
             <input v-model="password" type="password" class="field-input" placeholder="••••••••" />
           </div>
-          <div v-if="err" class="alert-error">{{ err }}</div>
+
+          <div v-if="err" class="alert-error">
+            {{ err }}
+          </div>
+
           <button :disabled="loading" @click="signUp" class="btn-primary text-xs w-full justify-center mt-2">
             <span v-if="loading">Зачекайте...</span>
             <span v-else>Зареєструватися</span>
@@ -127,7 +154,8 @@ const signUp = async () => {
       </div>
 
       <div class="text-center mt-6">
-        <NuxtLink to="/" class="text-xs text-neutral-400 hover:text-neutral-600 transition-colors tracking-wider uppercase">
+        <NuxtLink to="/"
+          class="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
           ← На головну
         </NuxtLink>
       </div>

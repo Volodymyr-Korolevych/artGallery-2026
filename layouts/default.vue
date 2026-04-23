@@ -1,11 +1,11 @@
 <template>
-  <div class="min-h-screen flex flex-col">
+  <div class="min-h-screen flex flex-col bg-[var(--color-bg)] text-[var(--color-text)]">
     <AppHeader />
+
     <main class="flex-1">
-      <div class="container py-10 lg:py-14">
-        <slot />
-      </div>
+      <slot />
     </main>
+
     <AppFooter />
   </div>
 </template>

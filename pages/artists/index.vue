@@ -8,41 +8,49 @@ const { data: items } = await useAsyncData('artists', async () => {
 </script>
 
 <template>
-  <div>
-    <div class="divider"></div>
-    <h1 class="font-serif text-5xl font-semibold text-neutral-900 mb-10">Художники</h1>
+  <div class="container py-10 md:py-12 lg:py-14">
+    <div class="max-w-3xl mb-8 md:mb-10">
+      <div class="divider"></div>
+      <h1 class="mb-3">
+        Художники
+      </h1>
+      <p class="text-sm md:text-base text-[var(--color-text-muted)] leading-relaxed">
+        Автори, чиї роботи представлені у виставках галереї.
+      </p>
+    </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <NuxtLink
-        v-for="a in items"
-        :key="a.id"
-        :to="'/artists/' + a.slug"
-        class="art-card group block p-0 no-underline overflow-hidden"
-      >
-        <!-- Portrait image -->
+    <div v-if="items?.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-7">
+      <NuxtLink v-for="a in items" :key="a.id" :to="'/artists/' + a.slug"
+        class="art-card group block overflow-hidden no-underline">
         <div class="img-frame aspect-[3/4] overflow-hidden">
-          <img
-            v-if="a.portraitUrl || a.imageUrl"
-            :src="a.portraitUrl || a.imageUrl"
-            :alt="a.fullName"
-            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-          />
-          <div v-else class="w-full h-full bg-neutral-100 flex items-center justify-center">
-            <span class="font-serif text-4xl text-neutral-300">{{ a.fullName?.[0] }}</span>
+          <img v-if="a.portraitUrl || a.imageUrl" :src="a.portraitUrl || a.imageUrl" :alt="a.fullName"
+            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+          <div v-else class="w-full h-full bg-[var(--color-surface-soft)] flex items-center justify-center">
+            <span class="font-serif text-5xl text-[var(--color-text-muted)]/40">
+              {{ a.fullName?.[0] }}
+            </span>
           </div>
         </div>
-        <div class="p-5">
-          <h3 class="font-serif text-xl font-semibold text-neutral-900 mb-1 group-hover:text-neutral-600 transition-colors">
+
+        <div class="p-5 md:p-6">
+          <h3 class="leading-snug mb-1 group-hover:text-[var(--color-accent)] transition-colors">
             {{ a.fullName }}
           </h3>
-          <p v-if="a.country" class="text-xs text-neutral-400 tracking-wider uppercase">{{ a.country }}</p>
-          <p v-if="a.bio || a.description" class="text-sm text-neutral-600 mt-2 line-clamp-2 leading-relaxed">
+
+          <p v-if="a.country" class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)]">
+            {{ a.country }}
+          </p>
+
+          <p v-if="a.bio || a.description"
+            class="text-sm text-[var(--color-text-soft)] mt-3 line-clamp-3 leading-relaxed">
             {{ a.bio || a.description }}
           </p>
         </div>
       </NuxtLink>
     </div>
 
-    <div v-if="!items?.length" class="text-sm text-neutral-400 italic mt-8">Немає художників для показу.</div>
+    <div v-else class="alert-info max-w-xl">
+      Немає художників для показу.
+    </div>
   </div>
 </template>

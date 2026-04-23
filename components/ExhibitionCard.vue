@@ -1,4 +1,6 @@
 <script setup lang="ts">
+type Artist = { id: number; fullName: string; slug: string }
+
 const props = defineProps<{
   slug: string
   title: string
@@ -6,54 +8,77 @@ const props = defineProps<{
   startDate: string | null
   endDate: string | null
   cardUrl: string | null
-  artist?: { fullName: string, slug: string } | null
+  artist: Artist | null
 }>()
 
-const statusLabel = (s: any) => s === 'past' ? 'Минула' : s === 'current' ? 'Поточна' : s === 'upcoming' ? 'Майбутня' : ''
-const statusClass = (s: any) => s === 'current' ? 'current' : s === 'upcoming' ? 'upcoming' : 'past'
+const statusLabel = computed(() => {
+  if (props.status === 'current') return 'Поточна'
+  if (props.status === 'upcoming') return 'Майбутня'
+  if (props.status === 'past') return 'Завершена'
+  return ''
+})
+
+const statusClass = computed(() => {
+  if (props.status === 'current') return 'current'
+  if (props.status === 'upcoming') return 'upcoming'
+  if (props.status === 'past') return 'past'
+  return ''
+})
 
 const fmtRange = (s: string | null, e: string | null) => {
-  const toD = (v: string | null) => v ? new Date(v) : null
-  const f = (d: Date) => d.toLocaleDateString('uk-UA', { year: 'numeric', month: 'long', day: 'numeric' })
-  const sd = toD(s), ed = toD(e)
-  if (sd && ed) return `${f(sd)} — ${f(ed)}`
-  if (sd) return f(sd)
-  if (ed) return f(ed)
+  const d = (v: string | null) => v ? new Date(v) : null
+  const sD = d(s), eD = d(e)
+  const f = (dt: Date) => dt.toLocaleDateString('uk-UA', { year: 'numeric', month: 'long', day: 'numeric' })
+  if (sD && eD) return `${f(sD)} — ${f(eD)}`
+  if (sD) return f(sD)
+  if (eD) return f(eD)
   return ''
 }
 </script>
 
 <template>
-  <div class="art-card group flex flex-col">
+  <NuxtLink :to="`/exhibitions/${slug}`" class="group block art-card">
     <!-- Image -->
     <div class="img-frame aspect-[4/3] overflow-hidden">
       <img v-if="cardUrl" :src="cardUrl" :alt="title"
-        class="w-full h-full object-contain bg-neutral-50 transition-transform duration-500 group-hover:scale-[1.02]" />
-      <div v-else class="w-full h-full flex items-center justify-center text-neutral-300 text-sm">
+        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+      <div v-else class="w-full h-full flex items-center justify-center text-sm text-[var(--color-text-muted)]">
         Зображення відсутнє
       </div>
     </div>
 
-    <!-- Body -->
-    <div class="p-5 flex flex-col gap-2 flex-1">
-      <div class="flex items-center justify-between">
-        <span v-if="status" :class="['status-badge', statusClass(status)]">{{ statusLabel(status) }}</span>
-        <span v-if="startDate || endDate" class="text-xs text-neutral-400 font-sans">
+    <!-- Content -->
+    <div class="p-5 md:p-6 space-y-3">
+
+      <!-- Status + date -->
+      <div class="flex items-center justify-between gap-4">
+        <span v-if="statusLabel" class="status-badge" :class="statusClass">
+          {{ statusLabel }}
+        </span>
+
+        <span v-if="startDate || endDate"
+          class="text-[11px] tracking-[0.12em] text-[var(--color-text-muted)] whitespace-nowrap">
           {{ fmtRange(startDate, endDate) }}
         </span>
       </div>
 
-      <h3 class="font-serif text-xl font-semibold leading-snug text-neutral-900 mt-1">{{ title }}</h3>
+      <!-- Title -->
+      <h3 class="leading-snug group-hover:text-[var(--color-accent)] transition-colors">
+        {{ title }}
+      </h3>
 
-      <div v-if="artist" class="text-xs text-neutral-500 font-sans">
-        <NuxtLink :to="'/artists/' + artist.slug" class="artist-link">{{ artist.fullName }}</NuxtLink>
+      <!-- Artist -->
+      <div v-if="artist" class="text-sm text-[var(--color-text-soft)]">
+        {{ artist.fullName }}
       </div>
 
-      <div class="mt-auto pt-3">
-        <NuxtLink :to="'/exhibitions/' + slug" class="btn-outline text-xs px-4 py-2">
-          Детальніше
-        </NuxtLink>
+      <!-- CTA -->
+      <div class="pt-2">
+        <span class="btn-ghost text-xs px-0">
+          Детальніше →
+        </span>
       </div>
+
     </div>
-  </div>
+  </NuxtLink>
 </template>
