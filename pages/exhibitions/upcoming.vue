@@ -44,16 +44,14 @@ const goPage = (p: number) => { const safe = Math.min(Math.max(1, p), pageCount.
       </p>
     </div>
 
-    <div v-if="loading" class="space-y-5">
-      <div v-for="n in 3" :key="n" class="art-card animate-pulse overflow-hidden">
-        <div class="flex flex-col md:flex-row">
-          <div class="skeleton-img w-full md:w-72 h-52 md:h-auto md:min-h-[220px] shrink-0"></div>
-          <div class="flex-1 p-5 md:p-6 space-y-3">
-            <div class="skeleton-text w-24 h-3"></div>
-            <div class="skeleton h-8 w-3/4 rounded"></div>
-            <div class="skeleton-text w-full h-3"></div>
-            <div class="skeleton-text w-4/5 h-3"></div>
-          </div>
+    <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 max-w-5xl">
+      <div v-for="n in 4" :key="n" class="art-card animate-pulse overflow-hidden">
+        <div class="skeleton-img h-48 w-full"></div>
+        <div class="p-4 space-y-3">
+          <div class="skeleton-text w-24 h-3"></div>
+          <div class="skeleton h-7 w-3/4 rounded"></div>
+          <div class="skeleton-text w-full h-3"></div>
+          <div class="skeleton-text w-4/5 h-3"></div>
         </div>
       </div>
     </div>
@@ -63,12 +61,12 @@ const goPage = (p: number) => { const safe = Math.min(Math.max(1, p), pageCount.
         Наразі немає анонсованих експозицій.
       </div>
 
-      <div class="space-y-5" v-else>
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 max-w-5xl">
         <ExhibitionItemUpcoming v-for="e in paged" :key="e.id" :slug="e.slug" :title="e.title" :short="e.short"
           :coverUrl="e.coverUrl" :artist="artistOf(e)" />
       </div>
 
-      <div v-if="pageCount > 1" class="flex items-center justify-center gap-4 mt-10">
+      <div v-if="pageCount > 1" class="flex items-center justify-center gap-4 mt-10 max-w-5xl">
         <button class="pager-btn" :disabled="page <= 1" @click="goPage(page - 1)">
           ← Попередня
         </button>

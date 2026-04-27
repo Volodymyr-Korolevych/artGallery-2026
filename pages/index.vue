@@ -129,8 +129,8 @@ const fmtRange = (s: string | null, e: string | null) => {
 
           <!-- RIGHT -->
           <div class="lg:col-span-3 order-first lg:order-last">
-            <div v-if="ex.coverUrl" class="overflow-hidden">
-              <img :src="ex.coverUrl" :alt="ex.title" class="w-full h-[420px] md:h-[520px] object-cover" />
+            <div v-if="ex.coverUrl" class="flex items-center justify-center">
+              <img :src="ex.coverUrl" :alt="ex.title" class="w-full max-h-[520px] object-contain" />
             </div>
 
             <div v-else

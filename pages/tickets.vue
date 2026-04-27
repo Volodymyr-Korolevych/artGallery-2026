@@ -104,20 +104,20 @@ const fmtDate = (s: string) => new Date(s).toLocaleString('uk-UA', { year: 'nume
 </script>
 
 <template>
-  <div class="container py-10 md:py-12 lg:py-14">
+  <div class="container py-9 md:py-10 lg:py-12">
     <div v-if="loading" class="space-y-5 animate-pulse">
       <div class="divider"></div>
       <div class="h-10 skeleton w-2/3"></div>
       <div class="h-4 skeleton w-full"></div>
       <div class="h-4 skeleton w-4/5"></div>
       <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 pt-4">
-        <div class="lg:col-span-3 skeleton h-[360px]"></div>
-        <div class="lg:col-span-2 skeleton h-[260px]"></div>
+        <div class="lg:col-span-3 skeleton h-[300px]"></div>
+        <div class="lg:col-span-2 skeleton h-[230px]"></div>
       </div>
     </div>
 
     <template v-else>
-      <div class="max-w-3xl mb-8 md:mb-10">
+      <div class="max-w-3xl mb-7 md:mb-8">
         <div class="divider"></div>
         <h1 class="mb-2">
           {{ currentEx?.title || 'Немає поточної виставки' }}
@@ -127,24 +127,24 @@ const fmtDate = (s: string) => new Date(s).toLocaleString('uk-UA', { year: 'nume
         </p>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] gap-8 lg:gap-8 items-start">
+      <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(300px,0.75fr)] gap-6 lg:gap-7 items-start">
         <!-- Left: ticket selection -->
-        <div class="max-w-[760px]">
+        <div class="max-w-[680px]">
           <div class="art-card">
-            <div class="px-5 md:px-6 py-4 border-b border-[var(--color-line)] bg-[var(--color-surface-soft)]">
+            <div class="px-4 md:px-5 py-3 border-b border-[var(--color-line)] bg-[var(--color-surface-soft)]">
               <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)]">
                 Категорії квитків
               </div>
             </div>
 
-            <div class="divide-y divide-[color:rgba(188,197,203,0.35)]">
+            <div class="divide-y divide-[color:rgba(49,91,125,0.18)]">
               <div v-for="c in cats" :key="c.id"
-                class="px-5 md:px-6 py-4 md:py-5 flex items-center justify-between gap-4">
+                class="px-4 md:px-5 py-3 md:py-3.5 flex items-center justify-between gap-4">
                 <div class="min-w-0 pr-3">
-                  <div class="font-serif text-[1.08rem] md:text-[1.18rem] text-[var(--color-text)] leading-snug">
+                  <div class="font-serif text-[1rem] md:text-[1.08rem] text-[var(--color-text)] leading-tight">
                     {{ c.name }}
                   </div>
-                  <div class="text-sm text-[var(--color-text-soft)] mt-1">
+                  <div class="text-[13px] text-[var(--color-text-soft)] mt-0.5">
                     {{ fmt(Number(c.price)) }}
                   </div>
                 </div>
@@ -152,34 +152,38 @@ const fmtDate = (s: string) => new Date(s).toLocaleString('uk-UA', { year: 'nume
                 <div
                   class="shrink-0 flex items-center rounded-full border border-[var(--color-line-strong)] bg-[var(--color-surface)] overflow-hidden">
                   <button @click="dec(c.id)"
-                    class="w-10 h-10 flex items-center justify-center text-[18px] text-[var(--color-text-soft)] hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-text)] transition-colors"
+                    class="w-9 h-9 flex items-center justify-center text-[17px] text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-accent-hover)] transition-colors"
                     type="button" aria-label="Зменшити кількість">
                     −
                   </button>
 
                   <span
-                    class="w-11 h-10 flex items-center justify-center text-sm font-medium text-[var(--color-text)] border-x border-[var(--color-line)]">
+                    class="w-10 h-9 flex items-center justify-center text-sm font-medium text-[var(--color-text)] border-x border-[var(--color-line)]">
                     {{ qty[c.id] }}
                   </span>
 
                   <button @click="inc(c.id)"
-                    class="w-10 h-10 flex items-center justify-center text-[18px] text-[var(--color-text-soft)] hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-text)] transition-colors"
+                    class="w-9 h-9 flex items-center justify-center text-[17px] text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-accent-hover)] transition-colors"
                     type="button" aria-label="Збільшити кількість">
                     +
                   </button>
                 </div>
               </div>
 
-              <div v-if="!cats.length" class="px-5 md:px-6 py-8 text-sm text-[var(--color-text-muted)] italic">
+              <div v-if="!cats.length" class="px-4 md:px-5 py-7 text-sm text-[var(--color-text-muted)] italic">
                 Активні категорії квитків відсутні.
               </div>
             </div>
           </div>
 
-          <div class="mt-5">
+          <div class="mt-4 flex flex-wrap items-center gap-3">
             <button class="btn-primary text-xs" :disabled="!chosen.length || !currentEx || placing" @click="placeOrder">
               <span v-if="placing">Оформлення...</span>
               <span v-else>Оформити замовлення</span>
+            </button>
+
+            <button v-if="user" @click="toggleHistory" class="btn-outline text-xs" type="button">
+              {{ showHistory ? 'Сховати історію' : 'Показати історію' }}
             </button>
           </div>
         </div>
@@ -187,20 +191,20 @@ const fmtDate = (s: string) => new Date(s).toLocaleString('uk-UA', { year: 'nume
         <!-- Right: summary -->
         <div class="min-w-0">
           <div class="art-card lg:sticky lg:top-24">
-            <div class="px-5 md:px-6 py-4 border-b border-[var(--color-line)] bg-[var(--color-surface-soft)]">
+            <div class="px-4 md:px-5 py-3 border-b border-[var(--color-line)] bg-[var(--color-surface-soft)]">
               <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)]">
                 Підсумок
               </div>
             </div>
 
-            <div class="p-5 md:p-6">
-              <div class="space-y-3 min-h-[92px]">
+            <div class="p-4 md:p-5">
+              <div class="space-y-2 min-h-[70px]">
                 <div v-if="!chosen.length" class="text-sm text-[var(--color-text-muted)] italic">
                   Немає вибраних квитків
                 </div>
 
                 <div v-for="r in chosen" :key="r.id" class="flex justify-between items-start gap-4 text-sm">
-                  <span class="text-[var(--color-text-soft)] leading-relaxed">
+                  <span class="text-[var(--color-text-soft)] leading-snug">
                     {{ r.name }} × {{ r.quantity }}
                   </span>
                   <span class="font-medium text-[var(--color-text)] whitespace-nowrap">
@@ -209,21 +213,16 @@ const fmtDate = (s: string) => new Date(s).toLocaleString('uk-UA', { year: 'nume
                 </div>
               </div>
 
-              <div class="border-t border-[var(--color-line)] mt-5 pt-5 flex justify-between items-end gap-4">
+              <div class="border-t border-[var(--color-line)] mt-4 pt-4 flex justify-between items-end gap-4">
                 <span class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)]">
                   Разом
                 </span>
-                <span class="font-serif text-2xl md:text-[1.8rem] font-semibold text-[var(--color-text)] leading-none">
+                <span class="font-serif text-2xl md:text-[1.65rem] font-semibold text-[var(--color-text)] leading-none">
                   {{ fmt(total) }}
                 </span>
               </div>
             </div>
           </div>
-
-          <button v-if="user" @click="toggleHistory" class="btn-ghost text-xs mt-4 px-0 underline underline-offset-2"
-            type="button">
-            {{ showHistory ? 'Сховати історію замовлень' : 'Показати історію замовлень' }}
-          </button>
         </div>
       </div>
 
@@ -235,8 +234,8 @@ const fmtDate = (s: string) => new Date(s).toLocaleString('uk-UA', { year: 'nume
         class="mt-4 w-36 h-36 border border-[var(--color-line)] bg-white p-2" />
 
       <!-- History -->
-      <div v-if="showHistory" class="mt-12">
-        <div class="flex items-end justify-between gap-4 mb-5">
+      <div v-if="showHistory" class="mt-10">
+        <div class="flex items-end justify-between gap-4 mb-4">
           <h2>Історія ваших замовлень</h2>
         </div>
 
@@ -246,38 +245,42 @@ const fmtDate = (s: string) => new Date(s).toLocaleString('uk-UA', { year: 'nume
               <thead class="bg-[var(--color-surface-soft)]">
                 <tr class="border-b border-[var(--color-line)]">
                   <th
-                    class="text-left px-5 py-3.5 text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] font-medium">
-                    Дата</th>
+                    class="text-left px-4 py-3 text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] font-medium">
+                    Дата
+                  </th>
                   <th
-                    class="text-left px-5 py-3.5 text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] font-medium">
-                    Виставка</th>
+                    class="text-left px-4 py-3 text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] font-medium">
+                    Виставка
+                  </th>
                   <th
-                    class="text-left px-5 py-3.5 text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] font-medium">
-                    Категорія</th>
+                    class="text-left px-4 py-3 text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] font-medium">
+                    Категорія
+                  </th>
                   <th
-                    class="text-left px-5 py-3.5 text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] font-medium">
-                    К-сть</th>
+                    class="text-left px-4 py-3 text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] font-medium">
+                    К-сть
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="row in history" :key="row.id"
-                  class="border-b border-[color:rgba(188,197,203,0.28)] last:border-0 hover:bg-[var(--color-accent-soft)]/40 transition-colors">
-                  <td class="px-5 py-4 text-[var(--color-text-soft)] whitespace-nowrap">
+                  class="border-b border-[color:rgba(49,91,125,0.18)] last:border-0 hover:bg-[var(--color-accent-soft)]/40 transition-colors">
+                  <td class="px-4 py-3 text-[var(--color-text-soft)] whitespace-nowrap">
                     {{ fmtDate(row.createdAt) }}
                   </td>
-                  <td class="px-5 py-4 text-[var(--color-text)] font-serif">
+                  <td class="px-4 py-3 text-[var(--color-text)] font-serif">
                     {{ row.exhibition?.title || '—' }}
                   </td>
-                  <td class="px-5 py-4 text-[var(--color-text-soft)]">
+                  <td class="px-4 py-3 text-[var(--color-text-soft)]">
                     {{ row.category?.name || '—' }}
                   </td>
-                  <td class="px-5 py-4 text-[var(--color-text)] font-medium">
+                  <td class="px-4 py-3 text-[var(--color-text)] font-medium">
                     {{ row.quantity }}
                   </td>
                 </tr>
 
                 <tr v-if="!history.length">
-                  <td colspan="4" class="px-5 py-8 text-sm text-[var(--color-text-muted)] text-center italic">
+                  <td colspan="4" class="px-4 py-7 text-sm text-[var(--color-text-muted)] text-center italic">
                     Історія порожня.
                   </td>
                 </tr>
@@ -289,7 +292,8 @@ const fmtDate = (s: string) => new Date(s).toLocaleString('uk-UA', { year: 'nume
 
       <div v-if="!user" class="alert-info mt-8">
         Щоби оформити замовлення та переглядати історію,
-        <span @click="placeOrder" class="underline underline-offset-2 font-medium ml-1 cursor-pointer">увійдіть</span>.
+        <span @click="placeOrder"
+          class="font-medium ml-1 cursor-pointer text-[var(--color-accent)] hover:text-[var(--color-accent-hover)]">увійдіть</span>.
       </div>
     </template>
   </div>

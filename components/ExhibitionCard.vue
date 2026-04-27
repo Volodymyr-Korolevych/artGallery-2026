@@ -39,9 +39,9 @@ const fmtRange = (s: string | null, e: string | null) => {
 <template>
   <NuxtLink :to="`/exhibitions/${slug}`" class="group block art-card">
     <!-- Image -->
-    <div class="overflow-hidden bg-transparent border-b border-[var(--color-line)]">
+    <div class="overflow-hidden bg-transparent">
       <img v-if="cardUrl" :src="cardUrl" :alt="title"
-        class="w-full aspect-[4/3] object-cover transition-transform duration-500 group-hover:scale-[1.025]" />
+        class="w-full aspect-[4/3] object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
       <div v-else
         class="w-full aspect-[4/3] flex items-center justify-center text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-soft)]">
         Зображення відсутнє
@@ -49,33 +49,33 @@ const fmtRange = (s: string | null, e: string | null) => {
     </div>
 
     <!-- Content -->
-    <div class="p-4 md:p-5 space-y-2.5">
+    <div class="p-4 md:p-4 space-y-2">
       <!-- Status + date -->
-      <div class="flex flex-wrap items-center gap-2.5">
-        <span v-if="statusLabel" class="status-badge" :class="statusClass">
+      <div class="flex flex-col gap-1.5">
+        <span v-if="statusLabel" class="status-badge self-start" :class="statusClass">
           {{ statusLabel }}
         </span>
 
-        <span v-if="startDate || endDate"
-          class="text-[11px] leading-snug tracking-[0.08em] text-[var(--color-text-muted)]">
+        <span v-if="startDate || endDate" class="text-[12px] leading-snug text-[var(--color-text-muted)]">
           {{ fmtRange(startDate, endDate) }}
         </span>
       </div>
 
       <!-- Title -->
       <h3
-        class="text-[1.35rem] md:text-[1.45rem] leading-[1.05] group-hover:text-[var(--color-accent)] transition-colors">
+        class="text-[1.28rem] md:text-[1.38rem] leading-[1.04] group-hover:text-[var(--color-accent)] transition-colors">
         {{ title }}
       </h3>
 
       <!-- Artist -->
-      <div v-if="artist" class="text-[15px] leading-snug text-[var(--color-text-soft)]">
+      <div v-if="artist" class="text-[15px] leading-snug font-medium text-[var(--color-text-soft)]">
         {{ artist.fullName }}
       </div>
 
       <!-- CTA -->
-      <div class="pt-1">
-        <span class="btn-ghost text-xs px-0 py-0">
+      <div class="pt-0.5">
+        <span
+          class="inline-flex text-[12px] font-medium tracking-[0.08em] uppercase text-[var(--color-accent)] group-hover:text-[var(--color-accent-hover)] transition-colors">
           Детальніше →
         </span>
       </div>
