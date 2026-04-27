@@ -7,34 +7,38 @@
   --container-max: 1240px;
   --container-pad: clamp(18px, 3vw, 36px);
 
-  --color-bg: #f7f6f3;
-  --color-surface: #ffffff;
-  --color-surface-soft: #f2f3f1;
+  --color-bg: #f1f0ea;
+  --color-surface: #fffefa;
+  --color-surface-soft: #f6f5ef;
 
-  --color-text: #24313b;
-  --color-text-soft: #5f6b76;
-  --color-text-muted: #7c8790;
+  --color-text: #243f58;
+  --color-text-soft: #4f6475;
+  --color-text-muted: #738390;
 
-  --color-line: #d8dcd9;
-  --color-line-strong: #bcc5cb;
+  --color-line: rgba(49, 91, 125, 0.24);
+  --color-line-strong: rgba(49, 91, 125, 0.38);
 
-  --color-accent: #5f7384;
-  --color-accent-hover: #4f6372;
-  --color-accent-soft: #e8edf1;
+  --color-accent: #315b7d;
+  --color-accent-hover: #244a68;
+  --color-accent-soft: #e4edf3;
+  --color-accent-faint: rgba(49, 91, 125, 0.08);
 
-  --shadow-soft: 0 8px 24px rgba(36, 49, 59, 0.08);
-  --shadow-card: 0 12px 32px rgba(36, 49, 59, 0.09);
+  --shadow-soft: 0 8px 24px rgba(36, 63, 88, 0.09);
+  --shadow-card: 0 14px 34px rgba(36, 63, 88, 0.11);
 }
 
 @layer base {
 
   html,
   body {
-    background-color: var(--color-bg);
+    min-height: 100%;
     color: var(--color-text);
     font-family: 'Inter', system-ui, sans-serif;
     font-size: 16px;
-    line-height: 1.6;
+    line-height: 1.55;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(49, 91, 125, 0.055), transparent 28%),
+      linear-gradient(180deg, #f5f4ee 0%, var(--color-bg) 48%, #efeee8 100%);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -45,29 +49,33 @@
   h4 {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-weight: 600;
-    letter-spacing: 0.02em;
-    line-height: 1.08;
+    letter-spacing: 0.012em;
+    line-height: 1.05;
     color: var(--color-text);
   }
 
   h1 {
-    font-size: clamp(2.2rem, 4vw, 4rem) !important;
+    font-size: clamp(2.05rem, 3.55vw, 3.55rem) !important;
   }
 
   h2 {
-    font-size: clamp(1.8rem, 3vw, 2.9rem) !important;
+    font-size: clamp(1.7rem, 2.65vw, 2.65rem) !important;
   }
 
   h3 {
-    font-size: clamp(1.35rem, 2vw, 2rem) !important;
+    font-size: clamp(1.25rem, 1.75vw, 1.75rem) !important;
   }
 
   h4 {
-    font-size: clamp(1.1rem, 1.4vw, 1.4rem) !important;
+    font-size: clamp(1.05rem, 1.35vw, 1.35rem) !important;
   }
 
   p {
     color: var(--color-text-soft);
+  }
+
+  table {
+    font-size: 0.92rem;
   }
 
   a {
@@ -95,7 +103,6 @@
     padding-right: var(--container-pad);
   }
 
-  /* Кнопки */
   .btn-primary {
     @apply inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium uppercase transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed;
     background-color: var(--color-accent);
@@ -112,8 +119,8 @@
 
   .btn-outline {
     @apply inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium uppercase transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed;
-    background-color: transparent;
-    color: var(--color-text);
+    background-color: rgba(255, 255, 255, 0.25);
+    color: var(--color-accent);
     border: 1px solid var(--color-line-strong);
     letter-spacing: 0.08em;
   }
@@ -121,22 +128,23 @@
   .btn-outline:hover {
     background-color: var(--color-accent-soft);
     border-color: var(--color-accent);
-    color: var(--color-text);
+    color: var(--color-accent-hover);
   }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center px-5 py-2 text-sm font-medium transition-colors duration-200;
-    color: var(--color-text-soft);
+    color: var(--color-accent);
   }
 
   .btn-ghost:hover {
-    color: var(--color-text);
+    color: var(--color-accent-hover);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
-  /* Картка */
   .art-card {
     background: var(--color-surface);
-    border: 1px solid rgba(188, 197, 203, 0.55);
+    border: 1px solid var(--color-line);
     overflow: hidden;
     transition:
       box-shadow 0.28s ease,
@@ -147,44 +155,46 @@
   .art-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-card);
-    border-color: rgba(95, 115, 132, 0.35);
+    border-color: var(--color-line-strong);
   }
 
-  /* Рамка для зображення */
+  .art-card h3 {
+    line-height: 1.08;
+  }
+
   .img-frame {
-    background: var(--color-surface-soft);
-    border: 1px solid rgba(188, 197, 203, 0.42);
+    background: transparent;
+    border: 1px solid var(--color-line);
     overflow: hidden;
   }
 
-  /* Бейдж статусу */
   .status-badge {
     @apply inline-block text-xs uppercase px-3 py-1;
     letter-spacing: 0.12em;
     border: 1px solid currentColor;
+    line-height: 1.15;
   }
 
   .status-badge.past {
-    color: var(--color-text-muted);
-    background: rgba(124, 135, 144, 0.06);
-    border-color: rgba(124, 135, 144, 0.24);
+    color: #7a8791;
+    background: rgba(122, 135, 145, 0.08);
+    border-color: rgba(122, 135, 145, 0.3);
   }
 
   .status-badge.current {
     color: var(--color-accent);
-    background: rgba(95, 115, 132, 0.08);
-    border-color: rgba(95, 115, 132, 0.28);
+    background: rgba(49, 91, 125, 0.1);
+    border-color: rgba(49, 91, 125, 0.42);
   }
 
   .status-badge.upcoming {
-    color: #6d7882;
-    background: rgba(109, 120, 130, 0.08);
-    border-color: rgba(109, 120, 130, 0.24);
+    color: #466c88;
+    background: rgba(70, 108, 136, 0.09);
+    border-color: rgba(70, 108, 136, 0.34);
   }
 
-  /* Поля форми */
   .field-input {
-    @apply w-full bg-transparent py-3 text-sm outline-none transition-colors;
+    @apply w-full bg-transparent py-2.5 text-sm outline-none transition-colors;
     color: var(--color-text);
     border-bottom: 1px solid var(--color-line-strong);
   }
@@ -203,32 +213,30 @@
     letter-spacing: 0.12em;
   }
 
-  /* Алерти */
   .alert-info {
     @apply px-4 py-3 text-sm;
-    background: #edf2f5;
-    border-left: 2px solid #8ea0ae;
-    color: #41505c;
+    background: rgba(49, 91, 125, 0.08);
+    border-left: 2px solid var(--color-accent);
+    color: var(--color-text);
   }
 
   .alert-success {
     @apply px-4 py-3 text-sm;
-    background: #eef4f1;
-    border-left: 2px solid #8ea095;
-    color: #4a5b51;
+    background: #edf5f1;
+    border-left: 2px solid #789a86;
+    color: #405f4c;
   }
 
   .alert-error {
     @apply px-4 py-3 text-sm;
-    background: #f6eeee;
-    border-left: 2px solid #b18f8f;
-    color: #6e5353;
+    background: #f7eeee;
+    border-left: 2px solid #b07d7d;
+    color: #6c4a4a;
   }
 
-  /* Skeleton */
   .skeleton {
     @apply animate-pulse rounded;
-    background-color: #e5e7e4;
+    background-color: rgba(49, 91, 125, 0.12);
   }
 
   .skeleton-text {
@@ -239,39 +247,39 @@
     @apply rounded skeleton;
   }
 
-  /* Роздільник */
   .divider {
     @apply my-4;
     width: 36px;
     height: 1px;
-    background-color: rgba(95, 115, 132, 0.72);
+    background-color: var(--color-accent);
   }
 
-  /* Посилання-художник */
   .artist-link {
-    color: var(--color-text);
+    color: var(--color-accent);
+    font-size: 0.95em;
+    font-weight: 500;
     text-decoration: underline;
-    text-underline-offset: 2px;
-    text-decoration-color: rgba(95, 115, 132, 0.35);
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(49, 91, 125, 0.35);
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
   .artist-link:hover {
-    text-decoration-color: rgba(95, 115, 132, 0.9);
+    color: var(--color-accent-hover);
+    text-decoration-color: var(--color-accent-hover);
   }
 
-  /* Навігація по сторінках */
   .pager-btn {
     @apply px-4 py-2 text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed;
-    border: 1px solid rgba(188, 197, 203, 0.65);
-    color: var(--color-text-soft);
+    border: 1px solid var(--color-line-strong);
+    color: var(--color-accent);
     background: var(--color-surface);
   }
 
   .pager-btn:hover {
-    border-color: rgba(95, 115, 132, 0.52);
-    color: var(--color-text);
+    border-color: var(--color-accent);
+    color: var(--color-accent-hover);
     background: var(--color-accent-soft);
   }
 }

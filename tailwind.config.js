@@ -14,21 +14,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: '#2f3a45',
-        'ink-soft': '#5b6773',
-        'surface-muted': '#f5f5f4',
-        line: '#d6d3d1',
-        accent: '#7c8a96'
+        ink: '#243f58',
+        'ink-soft': '#4f6475',
+        'ink-muted': '#738390',
+        surface: '#fffefa',
+        'surface-soft': '#f6f5ef',
+        line: 'rgba(49, 91, 125, 0.24)',
+        accent: '#315b7d',
+        'accent-hover': '#244a68',
+        'accent-soft': '#e4edf3'
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         serif: ['Cormorant Garamond', 'Georgia', 'serif']
       },
       maxWidth: {
-        container: '1200px'
+        container: '1240px'
       },
       boxShadow: {
-        soft: '0 8px 30px rgba(47, 58, 69, 0.08)'
+        soft: '0 8px 24px rgba(36, 63, 88, 0.09)',
+        card: '0 14px 34px rgba(36, 63, 88, 0.11)'
       },
       letterSpacing: {
         wideish: '0.08em'

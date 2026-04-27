@@ -9,8 +9,8 @@ type Exhibition = {
 type Artist = { id: number; fullName: string; slug: string }
 
 const loading = ref(true)
-const ex = ref < Exhibition | null > (null)
-const artist = ref < Artist | null > (null)
+const ex = ref<Exhibition | null>(null)
+const artist = ref<Artist | null>(null)
 
 const fetchCurrent = async () => {
   loading.value = true
@@ -45,53 +45,59 @@ const fmtRange = (s: string | null, e: string | null) => {
 <template>
   <div class="min-h-screen flex flex-col">
     <main class="flex-1">
+
       <!-- Tab nav -->
-      <div class="border-b border-[var(--color-line)] bg-transparent">
+      <div class="border-b border-[var(--color-accent)]/40">
         <div class="container flex gap-0 overflow-x-auto">
           <NuxtLink to="/exhibitions/past"
-            class="px-5 md:px-6 py-4 text-[11px] tracking-[0.18em] uppercase text-[var(--color-text-muted)] border-b border-transparent hover:text-[var(--color-text)] hover:border-[var(--color-line-strong)] transition-all whitespace-nowrap">
+            class="px-5 md:px-6 py-4 text-[11px] tracking-[0.18em] uppercase text-[var(--color-text-muted)] border-b border-transparent hover:text-[var(--color-text)] hover:border-[var(--color-accent)] transition-all whitespace-nowrap">
             Минулі</NuxtLink>
+
           <button
-            class="px-5 md:px-6 py-4 text-[11px] tracking-[0.18em] uppercase text-[var(--color-text)] border-b border-[var(--color-accent)] font-medium whitespace-nowrap">Поточна</button>
+            class="px-5 md:px-6 py-4 text-[11px] tracking-[0.18em] uppercase text-[var(--color-text)] border-b border-[var(--color-accent)] font-medium whitespace-nowrap">
+            Поточна
+          </button>
+
           <NuxtLink to="/exhibitions/upcoming"
-            class="px-5 md:px-6 py-4 text-[11px] tracking-[0.18em] uppercase text-[var(--color-text-muted)] border-b border-transparent hover:text-[var(--color-text)] hover:border-[var(--color-line-strong)] transition-all whitespace-nowrap">
+            class="px-5 md:px-6 py-4 text-[11px] tracking-[0.18em] uppercase text-[var(--color-text-muted)] border-b border-transparent hover:text-[var(--color-text)] hover:border-[var(--color-accent)] transition-all whitespace-nowrap">
             Майбутні</NuxtLink>
         </div>
       </div>
 
       <!-- Loading -->
       <div v-if="loading" class="container py-12 md:py-14 lg:py-16">
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12 xl:gap-16 items-center">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12 xl:gap-14 items-center">
           <div class="lg:col-span-2 space-y-4">
             <div class="skeleton-text w-24 h-3"></div>
-            <div class="skeleton h-10 w-full rounded"></div>
-            <div class="skeleton h-10 w-4/5 rounded"></div>
+            <div class="skeleton h-10 w-full"></div>
+            <div class="skeleton h-10 w-4/5"></div>
             <div class="skeleton-text w-1/2 h-3"></div>
-            <div class="skeleton-text w-3/4 h-3"></div>
           </div>
-          <div class="lg:col-span-3 skeleton-img h-[420px] md:h-[480px] rounded"></div>
+          <div class="lg:col-span-3 skeleton-img h-[420px] md:h-[480px]"></div>
         </div>
       </div>
 
-      <!-- Empty state -->
+      <!-- Empty -->
       <div v-else-if="!ex" class="container py-12 md:py-14 lg:py-16">
         <div class="alert-info max-w-xl">
-          Зараз немає позначеної поточної експозиції. Перейдіть до розділів «Минулі» або «Майбутні».
+          Зараз немає позначеної поточної експозиції.
         </div>
       </div>
 
       <!-- Hero -->
       <div v-else class="container py-10 md:py-12 lg:py-14">
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12 xl:gap-16 items-center">
-          <!-- Left: info -->
-          <div class="lg:col-span-2 flex flex-col gap-5 lg:gap-6 max-w-xl">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-10 xl:gap-12 items-center">
+
+          <!-- LEFT -->
+          <div class="lg:col-span-2 flex flex-col gap-5 max-w-xl">
             <div>
               <div class="divider"></div>
+
               <div class="text-[11px] tracking-[0.18em] uppercase text-[var(--color-text-muted)] mb-3">
                 Поточна експозиція
               </div>
-              <h1
-                class="font-serif text-[clamp(2.25rem,4.6vw,4.25rem)] font-semibold leading-[0.98] text-[var(--color-text)]">
+
+              <h1 class="font-serif leading-[0.98] text-[var(--color-text)]">
                 {{ ex.title }}
               </h1>
             </div>
@@ -100,13 +106,15 @@ const fmtRange = (s: string | null, e: string | null) => {
               {{ fmtRange(ex.startDate, ex.endDate) }}
             </div>
 
-            <p v-if="ex.short" class="text-[15px] md:text-base text-[var(--color-text-soft)] leading-relaxed max-w-md">
+            <p v-if="ex.short" class="text-[15px] md:text-base text-[var(--color-text-soft)] leading-relaxed">
               {{ ex.short }}
             </p>
 
             <div v-if="artist" class="text-sm text-[var(--color-text-muted)]">
               Художник:
-              <NuxtLink :to="'/artists/' + artist.slug" class="artist-link ml-1">{{ artist.fullName }}</NuxtLink>
+              <NuxtLink :to="'/artists/' + artist.slug" class="artist-link ml-1">
+                {{ artist.fullName }}
+              </NuxtLink>
             </div>
 
             <div class="flex flex-wrap gap-3 pt-1">
@@ -119,19 +127,21 @@ const fmtRange = (s: string | null, e: string | null) => {
             </div>
           </div>
 
-          <!-- Right: image -->
+          <!-- RIGHT -->
           <div class="lg:col-span-3 order-first lg:order-last">
-            <div class="img-frame overflow-hidden bg-[var(--color-surface)]" v-if="ex.coverUrl">
-              <img :src="ex.coverUrl" :alt="ex.title"
-                class="w-full max-h-[520px] md:max-h-[560px] object-contain bg-[var(--color-surface-muted)]" />
+            <div v-if="ex.coverUrl" class="overflow-hidden">
+              <img :src="ex.coverUrl" :alt="ex.title" class="w-full h-[420px] md:h-[520px] object-cover" />
             </div>
+
             <div v-else
-              class="img-frame h-[420px] md:h-[480px] flex items-center justify-center text-[var(--color-text-muted)] text-sm">
+              class="h-[420px] md:h-[480px] flex items-center justify-center text-[var(--color-text-muted)] text-sm border border-[var(--color-line)]">
               Обкладинка відсутня
             </div>
           </div>
+
         </div>
       </div>
+
     </main>
   </div>
 </template>

@@ -64,7 +64,7 @@ const fmtRange = (s: string | null, e: string | null) => {
     <template v-else-if="ex">
 
       <!-- Header -->
-      <div class="max-w-3xl mb-8 md:mb-10">
+      <div class="max-w-3xl mb-7 md:mb-8">
         <div class="divider"></div>
 
         <h1 class="mb-3">
@@ -75,7 +75,7 @@ const fmtRange = (s: string | null, e: string | null) => {
           {{ fmtRange(ex.startDate, ex.endDate) }}
         </div>
 
-        <div v-if="artist" class="text-sm text-[var(--color-text-soft)]">
+        <div v-if="artist" class="text-base text-[var(--color-text-soft)]">
           Художник:
           <NuxtLink :to="'/artists/' + artist.slug" class="artist-link ml-1">
             {{ artist.fullName }}
@@ -84,16 +84,20 @@ const fmtRange = (s: string | null, e: string | null) => {
       </div>
 
       <!-- Image -->
-      <div class="img-frame mb-10 md:mb-12">
-        <img v-if="ex.coverUrl" :src="ex.coverUrl" :alt="ex.title"
-          class="w-full max-h-[520px] object-contain bg-[var(--color-surface-soft)]" />
-        <div v-else class="h-[420px] flex items-center justify-center text-[var(--color-text-muted)] text-sm">
+      <div class="mb-9 md:mb-10">
+        <div v-if="ex.coverUrl" class="border border-[var(--color-line)] bg-transparent px-3 py-3 md:px-4 md:py-4">
+          <img :src="ex.coverUrl" :alt="ex.title"
+            class="mx-auto block max-h-[620px] w-auto max-w-full object-contain" />
+        </div>
+
+        <div v-else
+          class="h-[360px] flex items-center justify-center text-[var(--color-text-muted)] text-sm border border-[var(--color-line)]">
           Зображення відсутнє
         </div>
       </div>
 
       <!-- Description -->
-      <div class="max-w-2xl space-y-4">
+      <div class="max-w-3xl space-y-4">
         <p v-if="ex.description" class="text-[15px] md:text-base leading-relaxed text-[var(--color-text-soft)]">
           {{ ex.description }}
         </p>
