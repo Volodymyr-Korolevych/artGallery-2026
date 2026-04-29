@@ -62,7 +62,7 @@ const submitForm = async () => {
             <div>
               <div class="field-label">Телефон</div>
               <div class="font-serif text-[1.15rem] md:text-[1.25rem] text-[var(--color-text)] leading-snug">
-                +380 (00) 000-00-00
+                +380 (87) 345-12-46
               </div>
             </div>
 
@@ -70,7 +70,7 @@ const submitForm = async () => {
               <div class="field-label">Email</div>
               <div
                 class="font-serif text-[1.15rem] md:text-[1.25rem] text-[var(--color-text)] leading-snug break-words">
-                info@example.com
+                info@exhibition.gallery.com
               </div>
             </div>
 
