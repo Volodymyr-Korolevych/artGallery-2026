@@ -152,7 +152,7 @@ const fmt = (v: number) =>
                   <input v-model="row.name" type="text" class="field-input text-sm" @change="saveRow(row)" />
                 </div>
               </td>
-
+              
               <td class="px-5 py-4 align-middle">
                 <div class="w-24">
                   <input v-model.number="row.price" type="number" min="0" class="field-input text-sm"

@@ -1,38 +1,82 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'admin', middleware: 'admin-only' })
+
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { uk } from 'date-fns/locale'
+import { format as formatDate } from 'date-fns'
+
+const formatUaDate = (date: Date | null) => {
+  if (!date) return ''
+  return formatDate(date, 'dd.MM.yyyy', { locale: uk })
+}
 
 const supabase = useSupabaseClient()
 const saving = ref(false)
 const errorMsg = ref<string | null>(null)
-const toSlug = (s: string) => s.toLowerCase().trim().replace(/[^a-zа-яіїє0-9]+/gi, '-').replace(/^-+|-+$/g, '')
+const toDateOrNull = (s: string | null) => s || null
+
+const toSlug = (s: string) =>
+  s.toLowerCase().trim().replace(/[^a-zа-яіїє0-9]+/gi, '-').replace(/^-+|-+$/g, '')
 
 const artists = ref<any[]>([])
-const form = ref<any>({ title: '', painterId: null, short: '', description: '', startDate: null, endDate: null })
+const form = ref<any>({
+  title: '',
+  painterId: null,
+  short: '',
+  description: '',
+  startDate: null,
+  endDate: null
+})
 
 const fetchArtists = async () => {
   const { data } = await supabase.from('artists').select('id,"fullName"').order('fullName')
   artists.value = data || []
 }
+
 onMounted(fetchArtists)
 
-const toISOorNull = (s: string | null) => s ? new Date(s).toISOString() : null
 const close = () => navigateTo('/admin/exhibitions')
 
 const save = async () => {
   errorMsg.value = null
-  if (!form.value.title?.trim()) { errorMsg.value = 'Вкажіть назву виставки'; return }
-  if (!form.value.painterId) { errorMsg.value = 'Оберіть художника'; return }
+
+  if (!form.value.title?.trim()) {
+    errorMsg.value = 'Вкажіть назву виставки'
+    return
+  }
+
+  if (!form.value.painterId) {
+    errorMsg.value = 'Оберіть художника'
+    return
+  }
+
   saving.value = true
+
   try {
-    const payload: any = { title: form.value.title.trim(), slug: toSlug(form.value.title), painterId: form.value.painterId, short: form.value.short || null, description: form.value.description || '', startDate: toISOorNull(form.value.startDate), endDate: toISOorNull(form.value.endDate), coverUrl: null, cardUrl: null, isPublished: false, status: 'upcoming' }
+    const payload: any = {
+      title: form.value.title.trim(),
+      slug: toSlug(form.value.title),
+      painterId: form.value.painterId,
+      short: form.value.short || null,
+      description: form.value.description || '',
+      startDate: toDateOrNull(form.value.startDate),
+      endDate: toDateOrNull(form.value.endDate),
+      coverUrl: null,
+      cardUrl: null,
+      isPublished: false,
+      status: 'upcoming'
+    }
+
     const { data, error } = await supabase.from('exhibitions').insert(payload).select('id').single()
     if (error) throw error
+
     navigateTo('/admin/exhibitions/' + data.id)
-  } catch (e: any) { errorMsg.value = e?.message || 'Помилка збереження' }
-  finally { saving.value = false }
+  } catch (e: any) {
+    errorMsg.value = e?.message || 'Помилка збереження'
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -89,19 +133,24 @@ const save = async () => {
           </div>
         </div>
 
-        <div class="art-card p-6 md:p-7 space-y-5">
+        <div class="art-card p-6 md:p-7 space-y-5 overflow-visible">
           <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)]">
             Дати
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+            <div class="datepicker-wrap">
               <label class="field-label">Дата початку</label>
-              <VueDatePicker v-model="form.startDate" :locale="uk" auto-apply :enable-time-picker="false" />
+              <VueDatePicker v-model="form.startDate" :locale="uk" :format="formatUaDate" model-type="yyyy-MM-dd" auto-apply
+                :enable-time-picker="false" :teleport="true" menu-class-name="gallery-datepicker-menu"
+                :formats="{ input: 'd MMMM yyyy' }" />
             </div>
-            <div>
+
+            <div class="datepicker-wrap">
               <label class="field-label">Дата завершення</label>
-              <VueDatePicker v-model="form.endDate" :locale="uk" auto-apply :enable-time-picker="false" />
+              <VueDatePicker v-model="form.endDate" :locale="uk" :format="formatUaDate" model-type="yyyy-MM-dd" auto-apply
+                :enable-time-picker="false" :teleport="true" menu-class-name="gallery-datepicker-menu" 
+                :formats="{ input: 'd MMMM yyyy' }" />
             </div>
           </div>
         </div>
@@ -120,3 +169,14 @@ const save = async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.datepicker-wrap {
+  position: relative;
+  z-index: 20;
+}
+
+:global(.gallery-datepicker-menu) {
+  z-index: 9999 !important;
+}
+</style>

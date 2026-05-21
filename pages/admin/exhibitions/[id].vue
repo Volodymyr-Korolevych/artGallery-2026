@@ -3,6 +3,12 @@ definePageMeta({ layout: 'admin', middleware: 'admin-only' })
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { uk } from 'date-fns/locale'
+import { format as formatDate } from 'date-fns'
+
+const formatUaDate = (date: Date | null) => {
+  if (!date) return ''
+  return formatDate(date, 'dd.MM.yyyy', { locale: uk })
+}
 
 const route = useRoute()
 const supabase = useSupabaseClient()
@@ -180,11 +186,29 @@ const saveArtwork = async () => {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label class="field-label">Дата початку</label>
-              <VueDatePicker v-model="form.startDate" :locale="uk" auto-apply :enable-time-picker="false" />
+              <VueDatePicker 
+                  v-model="form.startDate" 
+                  :locale="uk"
+                  :format="formatUaDate"
+                  model-type="yyyy-MM-dd"
+                  :formats="{ input: 'd MMMM yyyy' }"
+                  auto-apply 
+                  :enable-time-picker="false" 
+                  :teleport="true" 
+                  menu-class-name="gallery-datepicker-menu" />
             </div>
             <div>
               <label class="field-label">Дата завершення</label>
-              <VueDatePicker v-model="form.endDate" :locale="uk" auto-apply :enable-time-picker="false" />
+              <VueDatePicker 
+                v-model="form.endDate"
+                :locale="uk"
+                :format="formatUaDate"
+                model-type="yyyy-MM-dd"
+                :formats="{ input: 'd MMMM yyyy' }" 
+                auto-apply 
+                :enable-time-picker="false" 
+                :teleport="true" 
+                menu-class-name="gallery-datepicker-menu" />
             </div>
           </div>
         </div>
@@ -294,3 +318,8 @@ const saveArtwork = async () => {
     </div>
   </div>
 </template>
+<style scoped>
+:global(.gallery-datepicker-menu) {
+  z-index: 9999 !important;
+}
+</style>

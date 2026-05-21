@@ -27,12 +27,20 @@
   --shadow-card: 0 10px 28px rgba(36, 63, 88, 0.12);
 }
 
+html, body { 
+  caret-color: transparent;
+}
+input, textarea {
+  caret-color: black;
+}
+
 @layer base {
 
   html,
   body {
     min-height: 100%;
     color: var(--color-text);
+    caret-color: transparent;
     font-family: 'Inter', system-ui, sans-serif;
     font-size: 15.5px;
     line-height: 1.5;
