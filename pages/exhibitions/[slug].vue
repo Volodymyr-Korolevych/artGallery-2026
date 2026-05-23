@@ -22,9 +22,19 @@ type Artist = {
   slug: string
 }
 
+type Artwork = {
+  id: number
+  title: string
+  year: number | null
+  imageUrl: string | null
+  description: string | null
+  isPublished: boolean | null
+}
+
 const loading = ref(true)
 const ex = ref<Exhibition | null>(null)
 const artist = ref<Artist | null>(null)
+const artworks = ref<Artwork[]>([])
 
 const fetchData = async () => {
   loading.value = true
@@ -48,8 +58,19 @@ const fetchData = async () => {
 
       artist.value = a as Artist
     }
+
+    const { data: works } = await supabase
+      .from('artworks')
+      .select('id, title, year, imageUrl, description, isPublished')
+      .eq('exhibitionId', data.id)
+      .eq('isPublished', true)
+      .order('id', { ascending: true })
+      .limit(6)
+
+    artworks.value = (works || []) as Artwork[]
   } else {
     ex.value = null
+    artworks.value = []
   }
 
   loading.value = false
@@ -128,6 +149,41 @@ const fmtRange = (s: string | null, e: string | null) => {
             {{ ex.description }}
           </p>
         </div>
+
+        <!-- Artworks -->
+        <section v-if="artworks.length" class="mt-12">
+          <div class="divider"></div>
+
+          <h2 class="font-serif text-2xl md:text-3xl mb-6 text-[var(--color-text)]">
+            Декілька робіт з виставки
+          </h2>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <article v-for="work in artworks" :key="work.id" class="art-card overflow-hidden">
+              <div class="bg-[var(--color-bg-soft)]">
+                <img v-if="work.imageUrl" :src="work.imageUrl" :alt="work.title" class="w-full h-64 object-cover" />
+                <div v-else class="h-64 flex items-center justify-center text-sm text-[var(--color-text-muted)]">
+                  Немає зображення
+                </div>
+              </div>
+
+              <div class="p-4">
+                <h3 class="font-serif text-xl text-[var(--color-text)] leading-tight">
+                  {{ work.title }}
+                </h3>
+
+                <div v-if="work.year" class="mt-1 text-xs text-[var(--color-text-muted)]">
+                  {{ work.year }}
+                </div>
+
+                <p v-if="work.description"
+                  class="mt-3 text-sm leading-relaxed text-[var(--color-text-soft)] line-clamp-3">
+                  {{ work.description }}
+                </p>
+              </div>
+            </article>
+          </div>
+        </section>
 
       </div>
 
