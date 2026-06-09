@@ -15,22 +15,29 @@
   --color-text-soft: #465d6f;
   --color-text-muted: #7a8d99;
 
-  --color-line: rgba(49, 91, 125, 0.32);
-  --color-line-strong: rgba(49, 91, 125, 0.48);
+  --color-line: rgba(49, 91, 125, 0.28);
+  --color-line-strong: rgba(49, 91, 125, 0.42);
 
-  --color-accent: #2f5877;
-  --color-accent-hover: #224761;
-  --color-accent-soft: #e2ecf3;
-  --color-accent-faint: rgba(49, 91, 125, 0.1);
+  --color-accent: #335f7f;
+  --color-accent-hover: #274d69;
+  --color-accent-soft: #e3edf3;
+  --color-accent-faint: rgba(49, 91, 125, 0.08);
 
-  --shadow-soft: 0 6px 18px rgba(36, 63, 88, 0.08);
-  --shadow-card: 0 10px 28px rgba(36, 63, 88, 0.12);
+  --color-danger: #9c3f3f;
+  --color-danger-hover: #7d2f2f;
+  --color-danger-soft: rgba(156, 63, 63, 0.07);
+
+  --shadow-soft: 0 6px 18px rgba(36, 63, 88, 0.07);
+  --shadow-card: 0 10px 26px rgba(36, 63, 88, 0.1);
 }
 
-html, body { 
+html,
+body {
   caret-color: transparent;
 }
-input, textarea {
+
+input,
+textarea {
   caret-color: black;
 }
 
@@ -83,7 +90,19 @@ input, textarea {
   }
 
   table {
-    font-size: 0.95rem;
+    font-size: 0.96rem;
+  }
+
+  th {
+    color: var(--color-text-muted);
+    font-size: 0.76rem;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+
+  td {
+    vertical-align: middle;
   }
 
   a {
@@ -112,11 +131,13 @@ input, textarea {
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium uppercase transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center text-xs font-medium uppercase transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed;
+    min-height: 38px;
+    padding: 0.55rem 1.35rem;
     background-color: var(--color-accent);
     color: #fff;
     border: 1px solid var(--color-accent);
-    letter-spacing: 0.08em;
+    letter-spacing: 0.065em;
   }
 
   .btn-primary:hover {
@@ -126,27 +147,45 @@ input, textarea {
   }
 
   .btn-outline {
-    @apply inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium uppercase transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed;
-    background-color: rgba(255, 255, 255, 0.25);
+    @apply inline-flex items-center justify-center text-xs font-medium uppercase transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed;
+    min-height: 38px;
+    padding: 0.55rem 1.35rem;
+    background-color: rgba(255, 255, 255, 0.18);
     color: var(--color-accent);
     border: 1px solid var(--color-line-strong);
-    letter-spacing: 0.08em;
+    letter-spacing: 0.065em;
   }
 
   .btn-outline:hover {
-    background-color: var(--color-accent-soft);
+    background-color: var(--color-accent-faint);
     border-color: var(--color-accent);
     color: var(--color-accent-hover);
   }
 
+  .btn-danger {
+    @apply inline-flex items-center justify-center text-xs font-medium uppercase transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed;
+    min-height: 38px;
+    padding: 0.55rem 1.35rem;
+    background-color: transparent;
+    color: var(--color-danger);
+    border: 1px solid rgba(156, 63, 63, 0.42);
+    letter-spacing: 0.065em;
+  }
+
+  .btn-danger:hover {
+    background-color: var(--color-danger-soft);
+    border-color: var(--color-danger-hover);
+    color: var(--color-danger-hover);
+  }
+
   .btn-ghost {
-    @apply inline-flex items-center justify-center px-5 py-2 text-sm font-medium transition-colors duration-200;
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium transition-colors duration-200;
     color: var(--color-accent);
   }
 
   .btn-ghost:hover {
     color: var(--color-accent-hover);
-    opacity: 0.85;
+    opacity: 0.88;
   }
 
   .art-card {
@@ -160,7 +199,7 @@ input, textarea {
   }
 
   .art-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: var(--shadow-card);
     border-color: var(--color-line-strong);
   }
@@ -200,7 +239,7 @@ input, textarea {
   .field-input {
     @apply w-full bg-transparent py-2 text-sm outline-none transition-colors;
     color: var(--color-text);
-    border-bottom: 1px solid var(--color-line-strong);
+    border-bottom: 1px solid rgba(49, 91, 125, 0.34);
   }
 
   .field-input::placeholder {
@@ -214,7 +253,7 @@ input, textarea {
   .field-label {
     @apply block text-xs uppercase mb-1;
     color: var(--color-text-muted);
-    letter-spacing: 0.12em;
+    letter-spacing: 0.105em;
   }
 
   .divider {
@@ -224,11 +263,10 @@ input, textarea {
     background-color: var(--color-accent);
   }
 
-  /* ВИПРАВЛЕНИЙ ЛІНК ХУДОЖНИКА */
   .artist-link {
     color: var(--color-accent);
-    font-size: 0.98em;
-    font-weight: 500;
+    font-size: 1em;
+    font-weight: 600;
     text-decoration: none;
     cursor: pointer;
   }
@@ -248,5 +286,57 @@ input, textarea {
     border-color: var(--color-accent);
     color: var(--color-accent-hover);
     background: var(--color-accent-soft);
+  }
+
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.96rem;
+  }
+
+  .admin-table thead {
+    background: var(--color-surface-soft);
+  }
+
+  .admin-table th {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--color-line);
+    text-align: left;
+  }
+
+  .admin-table td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid rgba(49, 91, 125, 0.14);
+  }
+
+  .admin-table tbody tr:nth-child(even) {
+    background: rgba(49, 91, 125, 0.025);
+  }
+
+  .admin-table tbody tr:hover {
+    background: rgba(49, 91, 125, 0.055);
+  }
+
+  .admin-action-row {
+    @apply flex items-center justify-end gap-3;
+  }
+
+  .admin-sidebar-link {
+    @apply flex items-center gap-3 text-sm transition-colors;
+    color: var(--color-text-soft);
+    padding: 0.65rem 0.8rem;
+    border-left: 2px solid transparent;
+  }
+
+  .admin-sidebar-link:hover {
+    color: var(--color-text);
+    background: rgba(49, 91, 125, 0.045);
+  }
+
+  .admin-sidebar-link.active {
+    color: var(--color-text);
+    background: rgba(49, 91, 125, 0.075);
+    border-left-color: var(--color-accent);
+    font-weight: 500;
   }
 }

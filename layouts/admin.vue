@@ -13,21 +13,20 @@ const nav = [
 
     <div class="flex flex-1 min-h-0">
       <!-- Sidebar -->
-      <aside class="w-72 shrink-0 border-r border-[var(--color-line)] bg-[var(--color-surface)]">
-        <div class="px-5 py-6 border-b border-[var(--color-line)]">
-          <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] mb-2">
+      <aside class="w-60 shrink-0 border-r border-[var(--color-line)] bg-[var(--color-surface)]">
+        <div class="px-4 py-5 border-b border-[var(--color-line)]">
+          <div class="text-[10px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] mb-1.5">
             Адміністрування
           </div>
-          <div class="font-serif text-[1.35rem] text-[var(--color-text)] leading-none">
+          <div class="font-serif text-[1.18rem] text-[var(--color-text-soft)] leading-none">
             Art Gallery
           </div>
         </div>
 
-        <nav class="p-4 space-y-1.5">
-          <NuxtLink v-for="item in nav" :key="item.to" :to="item.to"
-            class="flex items-center gap-3 px-4 py-3 text-sm text-[var(--color-text-soft)] hover:text-[var(--color-text)] hover:bg-[var(--color-accent-soft)] transition-colors rounded-sm group"
-            active-class="!text-[var(--color-text)] !bg-[var(--color-accent-soft)] font-medium">
-            <span class="text-base opacity-80 group-hover:opacity-100">{{ item.icon }}</span>
+        <nav class="p-3 space-y-1">
+          <NuxtLink v-for="item in nav" :key="item.to" :to="item.to" class="admin-sidebar-link group"
+            active-class="active">
+            <span class="text-sm opacity-65 group-hover:opacity-90">{{ item.icon }}</span>
             <span class="tracking-[0.01em]">{{ item.label }}</span>
           </NuxtLink>
         </nav>
@@ -35,7 +34,7 @@ const nav = [
 
       <!-- Content -->
       <main class="flex-1 overflow-auto min-w-0">
-        <div class="px-6 py-8 md:px-8 md:py-10 lg:px-10 lg:py-12">
+        <div class="px-5 py-7 md:px-7 md:py-8 lg:px-8 lg:py-9">
           <slot />
         </div>
       </main>
