@@ -166,7 +166,7 @@ const fmtRange = (s: string | null, e: string | null) => {
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <article v-for="work in artworks" :key="work.id" class="art-card overflow-hidden">
-              <div class="img-frame bg-transparent">
+              <div class="img-frame bg-transparent pt-4">
                 <img v-if="work.imageUrl" :src="work.imageUrl" :alt="work.title" class="w-full h-64 object-contain" />
                 <div v-else class="h-64 flex items-center justify-center text-sm text-[var(--color-text-muted)]">
                   Немає зображення
