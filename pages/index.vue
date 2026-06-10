@@ -112,7 +112,7 @@ const fmtRange = (s: string | null, e: string | null) => {
           <!-- RIGHT -->
           <div class="order-first lg:order-last">
             <div v-if="ex.coverUrl" class="flex items-center justify-center lg:justify-start">
-              <img :src="ex.coverUrl" :alt="ex.title" class="w-full max-w-[660px] max-h-[430px] object-contain" />
+              <img :src="ex.coverUrl" :alt="ex.title" class="w-full max-w-[760px] max-h-[500px] object-contain" />
             </div>
 
             <div v-else
