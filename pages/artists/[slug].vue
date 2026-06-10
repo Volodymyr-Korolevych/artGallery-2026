@@ -102,7 +102,7 @@ onMounted(fetchData)
 
           <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-7">
             <div v-for="w in artworks" :key="w.id" class="art-card overflow-hidden">
-              <div class="img-frame aspect-[4/3] overflow-hidden bg-transparent">
+              <div class="img-frame aspect-[4/3] overflow-hidden bg-transparent pt-4">
                 <img v-if="w.imageUrl" :src="w.imageUrl" :alt="w.title" class="w-full h-full object-contain" />
                 <div v-else
                   class="w-full h-full flex items-center justify-center text-[var(--color-text-muted)] text-sm">
