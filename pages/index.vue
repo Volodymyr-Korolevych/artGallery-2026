@@ -45,27 +45,8 @@ const fmtRange = (s: string | null, e: string | null) => {
 <template>
   <div class="min-h-screen flex flex-col">
     <main class="flex-1">
-
-      <!-- Tab nav -->
-      <div class="border-b border-[var(--color-accent)]/40">
-        <div class="container flex gap-0 overflow-x-auto">
-          <NuxtLink to="/exhibitions/past"
-            class="px-5 md:px-6 py-4 text-[11px] tracking-[0.18em] uppercase text-[var(--color-text-muted)] border-b border-transparent hover:text-[var(--color-text)] hover:border-[var(--color-accent)] transition-all whitespace-nowrap">
-            Минулі</NuxtLink>
-
-          <button
-            class="px-5 md:px-6 py-4 text-[11px] tracking-[0.18em] uppercase text-[var(--color-text)] border-b border-[var(--color-accent)] font-medium whitespace-nowrap">
-            Поточна
-          </button>
-
-          <NuxtLink to="/exhibitions/upcoming"
-            class="px-5 md:px-6 py-4 text-[11px] tracking-[0.18em] uppercase text-[var(--color-text-muted)] border-b border-transparent hover:text-[var(--color-text)] hover:border-[var(--color-accent)] transition-all whitespace-nowrap">
-            Майбутні</NuxtLink>
-        </div>
-      </div>
-
       <!-- Loading -->
-      <div v-if="loading" class="container py-12 md:py-14 lg:py-16">
+      <div v-if="loading" class="container py-10 md:py-12 lg:py-14">
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12 xl:gap-14 items-center">
           <div class="lg:col-span-2 space-y-4">
             <div class="skeleton-text w-24 h-3"></div>
@@ -73,23 +54,24 @@ const fmtRange = (s: string | null, e: string | null) => {
             <div class="skeleton h-10 w-4/5"></div>
             <div class="skeleton-text w-1/2 h-3"></div>
           </div>
-          <div class="lg:col-span-3 skeleton-img h-[420px] md:h-[480px]"></div>
+          <div class="lg:col-span-3 skeleton-img h-[360px] md:h-[400px]"></div>
         </div>
       </div>
 
       <!-- Empty -->
-      <div v-else-if="!ex" class="container py-12 md:py-14 lg:py-16">
+      <div v-else-if="!ex" class="container py-10 md:py-12 lg:py-14">
         <div class="alert-info max-w-xl">
           Зараз немає позначеної поточної експозиції.
         </div>
       </div>
 
       <!-- Hero -->
-      <div v-else class="container py-10 md:py-12 lg:py-14">
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-10 xl:gap-12 items-center">
+      <div v-else class="container py-8 md:py-10 lg:py-12">
+        <div
+          class="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)] gap-8 lg:gap-12 xl:gap-14 items-center">
 
           <!-- LEFT -->
-          <div class="lg:col-span-2 flex flex-col gap-5 max-w-xl">
+          <div class="flex flex-col gap-5 max-w-xl">
             <div>
               <div class="divider"></div>
 
@@ -110,31 +92,31 @@ const fmtRange = (s: string | null, e: string | null) => {
               {{ ex.short }}
             </p>
 
-            <div v-if="artist" class="text-sm text-[var(--color-text-muted)]">
+            <div v-if="artist" class="text-[15px] text-[var(--color-text-muted)]">
               Художник:
               <NuxtLink :to="'/artists/' + artist.slug" class="artist-link ml-1">
                 {{ artist.fullName }}
               </NuxtLink>
             </div>
 
-            <div class="flex flex-wrap gap-3 pt-1">
-              <NuxtLink :to="'/exhibitions/' + ex.slug" class="btn-outline text-xs">
+            <div class="flex flex-wrap gap-5 pt-1">
+              <NuxtLink :to="'/exhibitions/' + ex.slug" class="btn-outline">
                 Детальніше
               </NuxtLink>
-              <NuxtLink to="/tickets" class="btn-primary text-xs">
+              <NuxtLink to="/tickets" class="btn-primary">
                 Придбати квитки
               </NuxtLink>
             </div>
           </div>
 
           <!-- RIGHT -->
-          <div class="lg:col-span-3 order-first lg:order-last">
-            <div v-if="ex.coverUrl" class="flex items-center justify-center">
-              <img :src="ex.coverUrl" :alt="ex.title" class="w-full max-h-[520px] object-contain" />
+          <div class="order-first lg:order-last">
+            <div v-if="ex.coverUrl" class="flex items-center justify-center lg:justify-start">
+              <img :src="ex.coverUrl" :alt="ex.title" class="w-full max-w-[660px] max-h-[430px] object-contain" />
             </div>
 
             <div v-else
-              class="h-[420px] md:h-[480px] flex items-center justify-center text-[var(--color-text-muted)] text-sm border border-[var(--color-line)]">
+              class="h-[360px] md:h-[400px] flex items-center justify-center text-[var(--color-text-muted)] text-sm border border-[var(--color-line)]">
               Обкладинка відсутня
             </div>
           </div>
