@@ -47,20 +47,22 @@ const save = async () => {
 </script>
 
 <template>
-  <div class="space-y-8">
+  <div class="space-y-7">
     <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
       <div>
-        <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] mb-2">
+        <div class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)] mb-2">
           Адмін-панель / Художники
         </div>
-        <h1 class="font-serif text-[2rem] md:text-[2.25rem] font-semibold text-[var(--color-text)] leading-none">
+        <h1 class="font-serif text-[1.85rem] md:text-[2.05rem] font-semibold text-[var(--color-text)] leading-none">
           Новий художник
         </h1>
       </div>
 
-      <div class="flex gap-3">
-        <button @click="close" class="btn-ghost text-xs">Скасувати</button>
-        <button :disabled="saving" @click="save" class="btn-primary text-xs">
+      <div class="admin-action-row">
+        <button @click="close" class="btn-outline">
+          Скасувати
+        </button>
+        <button :disabled="saving" @click="save" class="btn-primary">
           {{ saving ? 'Збереження...' : 'Зберегти' }}
         </button>
       </div>
@@ -68,10 +70,10 @@ const save = async () => {
 
     <div v-if="errorMsg" class="alert-error max-w-2xl">{{ errorMsg }}</div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-8 items-start">
-      <div class="space-y-6">
-        <div class="art-card p-6 md:p-7 space-y-5">
-          <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)]">
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
+      <div>
+        <div class="art-card p-5 md:p-6 space-y-4">
+          <div class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)]">
             Основна інформація
           </div>
 
@@ -82,17 +84,17 @@ const save = async () => {
 
           <div>
             <label class="field-label">Опис</label>
-            <textarea v-model="form.description" rows="6" class="field-input resize-none"
+            <textarea v-model="form.description" rows="5" class="field-input resize-none"
               placeholder="Біографія та творчий шлях..."></textarea>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label class="field-label">Рік народження</label>
               <input :value="birthYearModel" @input="e => birthYearModel = (e.target as HTMLInputElement).value"
                 @blur="clampYear" type="text" inputmode="numeric" maxlength="4" class="field-input"
                 placeholder="1970" />
-              <div class="text-xs text-[var(--color-text-muted)] mt-1">4 цифри (1000–2100)</div>
+              <div class="text-[11px] text-[var(--color-text-muted)] mt-1">4 цифри (1000–2100)</div>
             </div>
 
             <div>
@@ -103,9 +105,9 @@ const save = async () => {
         </div>
       </div>
 
-      <div class="space-y-6">
-        <div class="art-card p-6">
-          <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] mb-3">
+      <div>
+        <div class="art-card p-5">
+          <div class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)] mb-3">
             Підказка
           </div>
           <div class="alert-info text-xs">
