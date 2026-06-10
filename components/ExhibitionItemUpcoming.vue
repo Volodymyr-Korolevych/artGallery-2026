@@ -10,7 +10,6 @@ const props = defineProps<{
 
 <template>
   <div class="art-card group flex flex-col md:flex-row overflow-hidden">
-    <!-- Image -->
     <div
       class="img-frame w-full md:w-72 shrink-0 aspect-[4/3] md:aspect-auto md:min-h-[260px] overflow-hidden bg-[var(--color-surface-soft)]">
       <img v-if="coverUrl" :src="coverUrl" :alt="title"
@@ -21,29 +20,42 @@ const props = defineProps<{
       </div>
     </div>
 
-    <!-- Body -->
-    <div class="p-5 md:p-6 flex flex-col justify-center gap-3 flex-1">
-      <span class="status-badge upcoming self-start">Майбутня</span>
+    <div class="p-5 md:p-6 flex flex-col justify-center gap-2.5 flex-1">
+      <div class="exhibition-status-text">
+        Майбутня виставка
+      </div>
 
       <h3 class="leading-snug text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors">
         {{ title }}
       </h3>
 
-      <div v-if="artist" class="text-sm text-[var(--color-text-soft)]">
+      <div v-if="artist" class="text-[16px] leading-snug font-semibold">
         <NuxtLink :to="'/artists/' + artist.slug" class="artist-link">
           {{ artist.fullName }}
         </NuxtLink>
       </div>
 
-      <p v-if="short" class="text-sm text-[var(--color-text-soft)] leading-relaxed line-clamp-3">
+      <p v-if="short" class="text-sm text-[var(--color-text-muted)] leading-relaxed line-clamp-3">
         {{ short }}
       </p>
 
-      <div class="pt-2">
-        <NuxtLink :to="'/exhibitions/' + slug" class="btn-ghost text-xs px-0">
+      <div class="pt-1">
+        <NuxtLink :to="'/exhibitions/' + slug"
+          class="inline-flex text-[13px] font-medium text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] transition-colors">
           Детальніше →
         </NuxtLink>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.exhibition-status-text {
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+</style>

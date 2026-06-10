@@ -12,9 +12,9 @@ const props = defineProps<{
 }>()
 
 const statusLabel = computed(() => {
-  if (props.status === 'current') return 'Поточна'
-  if (props.status === 'upcoming') return 'Майбутня'
-  if (props.status === 'past') return 'Завершена'
+  if (props.status === 'current') return 'Поточна виставка'
+  if (props.status === 'upcoming') return 'Майбутня виставка'
+  if (props.status === 'past') return 'Завершена виставка'
   return ''
 })
 
@@ -38,7 +38,6 @@ const fmtRange = (s: string | null, e: string | null) => {
 
 <template>
   <NuxtLink :to="`/exhibitions/${slug}`" class="group block art-card">
-    <!-- Image -->
     <div class="overflow-hidden bg-transparent">
       <img v-if="cardUrl" :src="cardUrl" :alt="title"
         class="w-full aspect-[4/3] object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
@@ -48,37 +47,50 @@ const fmtRange = (s: string | null, e: string | null) => {
       </div>
     </div>
 
-    <!-- Content -->
-    <div class="p-4 md:p-4 space-y-2">
-      <!-- Status + date -->
-      <div class="flex flex-col gap-1.5">
-        <span v-if="statusLabel" class="status-badge self-start" :class="statusClass">
-          {{ statusLabel }}
-        </span>
-
-        <span v-if="startDate || endDate" class="text-[12px] leading-snug text-[var(--color-text-muted)]">
-          {{ fmtRange(startDate, endDate) }}
-        </span>
+    <div class="p-4 md:p-4 space-y-2.5">
+      <div v-if="statusLabel" class="exhibition-status-text" :class="statusClass">
+        {{ statusLabel }}
       </div>
 
-      <!-- Title -->
       <h3
         class="text-[1.28rem] md:text-[1.38rem] leading-[1.04] group-hover:text-[var(--color-accent)] transition-colors">
         {{ title }}
       </h3>
 
-      <!-- Artist -->
-      <div v-if="artist" class="text-[15px] leading-snug font-medium text-[var(--color-text-soft)]">
+      <div v-if="artist" class="text-[16px] leading-snug font-semibold text-[var(--color-text)]">
         {{ artist.fullName }}
       </div>
 
-      <!-- CTA -->
-      <div class="pt-0.5">
+      <div v-if="startDate || endDate" class="text-[12px] leading-snug text-[var(--color-text-muted)]">
+        {{ fmtRange(startDate, endDate) }}
+      </div>
+
+      <div class="pt-1">
         <span
-          class="inline-flex text-[12px] font-medium tracking-[0.08em] uppercase text-[var(--color-accent)] group-hover:text-[var(--color-accent-hover)] transition-colors">
+          class="inline-flex text-[13px] font-medium text-[var(--color-accent)] group-hover:text-[var(--color-accent-hover)] transition-colors">
           Детальніше →
         </span>
       </div>
     </div>
   </NuxtLink>
 </template>
+
+<style scoped>
+.exhibition-status-text {
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.exhibition-status-text.current,
+.exhibition-status-text.upcoming {
+  color: var(--color-accent);
+}
+
+.exhibition-status-text.past {
+  color: var(--color-text-muted);
+}
+</style>
