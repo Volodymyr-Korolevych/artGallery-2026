@@ -37,11 +37,10 @@ onMounted(fetchArtists)
 
     <div class="art-card overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[680px] table-fixed">
+        <table class="w-full min-w-[560px] table-fixed">
           <colgroup>
             <col style="width: 82px" />
             <col />
-            <col style="width: 180px" />
             <col style="width: 56px" />
           </colgroup>
 
@@ -55,23 +54,19 @@ onMounted(fetchArtists)
                 class="px-4 py-3 text-left text-[11px] tracking-[0.13em] uppercase text-[var(--color-text-muted)] font-medium">
                 Художник
               </th>
-              <th
-                class="px-4 py-3 text-left text-[11px] tracking-[0.13em] uppercase text-[var(--color-text-muted)] font-medium">
-                Дані
-              </th>
               <th class="px-4 py-3"></th>
             </tr>
           </thead>
 
           <tbody>
             <tr v-if="loading">
-              <td colspan="4" class="px-4 py-10 text-sm text-[var(--color-text-muted)] text-center">
+              <td colspan="3" class="px-4 py-10 text-sm text-[var(--color-text-muted)] text-center">
                 Завантаження...
               </td>
             </tr>
 
             <tr v-else-if="!items.length">
-              <td colspan="4" class="px-4 py-10 text-sm text-[var(--color-text-muted)] text-center italic">
+              <td colspan="3" class="px-4 py-10 text-sm text-[var(--color-text-muted)] text-center italic">
                 Немає художників
               </td>
             </tr>
@@ -93,13 +88,6 @@ onMounted(fetchArtists)
               <td class="px-4 py-3 align-middle">
                 <div class="font-medium text-[var(--color-text)] truncate">
                   {{ a.fullName }}
-                </div>
-              </td>
-
-              <td class="px-4 py-3 align-middle">
-                <div class="text-sm text-[var(--color-text-soft)] truncate">
-                  {{ a.country || '—' }}
-                  <span v-if="a.birthYear"> · {{ a.birthYear }}</span>
                 </div>
               </td>
 

@@ -13,20 +13,20 @@ const nav = [
 
     <div class="flex flex-1 min-h-0">
       <!-- Sidebar -->
-      <aside class="w-60 shrink-0 border-r border-[var(--color-line)] bg-[var(--color-surface)]">
-        <div class="px-4 py-5 border-b border-[var(--color-line)]">
-          <div class="text-[10px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] mb-1.5">
+      <aside class="w-72 shrink-0 border-r border-[var(--color-line)] bg-[var(--color-surface)]">
+        <div class="px-5 py-6 border-b border-[var(--color-line)]">
+          <div class="text-[10px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] mb-2">
             Адміністрування
           </div>
-          <div class="font-serif text-[1.18rem] text-[var(--color-text-soft)] leading-none">
+          <div class="font-serif text-[1.28rem] text-[var(--color-text-soft)] leading-none">
             Art Gallery
           </div>
         </div>
 
-        <nav class="p-3 space-y-1">
-          <NuxtLink v-for="item in nav" :key="item.to" :to="item.to" class="admin-sidebar-link group"
+        <nav class="p-4 space-y-1.5">
+          <NuxtLink v-for="item in nav" :key="item.to" :to="item.to" class="admin-sidebar-link group text-[15px]"
             active-class="active">
-            <span class="text-sm opacity-65 group-hover:opacity-90">{{ item.icon }}</span>
+            <span class="text-base opacity-70 group-hover:opacity-95">{{ item.icon }}</span>
             <span class="tracking-[0.01em]">{{ item.label }}</span>
           </NuxtLink>
         </nav>
