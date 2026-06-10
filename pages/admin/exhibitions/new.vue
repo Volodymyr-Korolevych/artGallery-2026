@@ -81,31 +81,36 @@ const save = async () => {
 </script>
 
 <template>
-  <div class="space-y-8">
+  <div class="space-y-7">
     <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
       <div>
-        <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] mb-2">
+        <div class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)] mb-2">
           Адмін-панель / Експозиції
         </div>
-        <h1 class="font-serif text-[2rem] md:text-[2.25rem] font-semibold text-[var(--color-text)] leading-none">
+        <h1 class="font-serif text-[1.85rem] md:text-[2.05rem] font-semibold text-[var(--color-text)] leading-none">
           Нова виставка
         </h1>
       </div>
 
-      <div class="flex gap-3">
-        <button @click="close" class="btn-ghost text-xs">Скасувати</button>
-        <button :disabled="saving" @click="save" class="btn-primary text-xs">
+      <div class="admin-action-row">
+        <button @click="close" class="btn-outline">
+          Скасувати
+        </button>
+
+        <button :disabled="saving" @click="save" class="btn-primary">
           {{ saving ? 'Збереження...' : 'Зберегти' }}
         </button>
       </div>
     </div>
 
-    <div v-if="errorMsg" class="alert-error max-w-2xl">{{ errorMsg }}</div>
+    <div v-if="errorMsg" class="alert-error max-w-2xl">
+      {{ errorMsg }}
+    </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-8 items-start">
-      <div class="space-y-6">
-        <div class="art-card p-6 md:p-7 space-y-5">
-          <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)]">
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
+      <div class="space-y-5">
+        <div class="art-card p-5 md:p-6 space-y-4">
+          <div class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)]">
             Основна інформація
           </div>
 
@@ -118,49 +123,54 @@ const save = async () => {
             <label class="field-label">Художник</label>
             <select v-model="form.painterId" class="field-input">
               <option :value="null">— Оберіть художника —</option>
-              <option v-for="a in artists" :key="a.id" :value="a.id">{{ a.fullName }}</option>
+              <option v-for="a in artists" :key="a.id" :value="a.id">
+                {{ a.fullName }}
+              </option>
             </select>
           </div>
 
           <div>
             <label class="field-label">Короткий опис</label>
-            <textarea v-model="form.short" rows="2" class="field-input resize-none" placeholder="1 абзац"></textarea>
+            <textarea v-model="form.short" rows="2" class="field-input resize-none" placeholder="1 абзац" />
           </div>
 
           <div>
             <label class="field-label">Повний опис</label>
-            <textarea v-model="form.description" rows="5" class="field-input resize-none"></textarea>
+            <textarea v-model="form.description" rows="4" class="field-input resize-none" />
           </div>
         </div>
 
-        <div class="art-card p-6 md:p-7 space-y-5 overflow-visible">
-          <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)]">
+        <div class="art-card p-5 md:p-6 space-y-4 overflow-visible">
+          <div class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)]">
             Дати
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div class="datepicker-wrap">
               <label class="field-label">Дата початку</label>
-              <VueDatePicker v-model="form.startDate" :locale="uk" :format="formatUaDate" model-type="yyyy-MM-dd" auto-apply
-                :enable-time-picker="false" :teleport="true" menu-class-name="gallery-datepicker-menu"
+
+              <VueDatePicker v-model="form.startDate" :locale="uk" :format="formatUaDate" model-type="yyyy-MM-dd"
+                auto-apply :enable-time-picker="false" :teleport="true" menu-class-name="gallery-datepicker-menu"
                 :formats="{ input: 'd MMMM yyyy' }" />
             </div>
 
             <div class="datepicker-wrap">
               <label class="field-label">Дата завершення</label>
-              <VueDatePicker v-model="form.endDate" :locale="uk" :format="formatUaDate" model-type="yyyy-MM-dd" auto-apply
-                :enable-time-picker="false" :teleport="true" menu-class-name="gallery-datepicker-menu" 
+
+              <VueDatePicker v-model="form.endDate" :locale="uk" :format="formatUaDate" model-type="yyyy-MM-dd"
+                auto-apply :enable-time-picker="false" :teleport="true" menu-class-name="gallery-datepicker-menu"
                 :formats="{ input: 'd MMMM yyyy' }" />
             </div>
           </div>
         </div>
       </div>
 
-      <div class="space-y-6">
-        <div class="art-card p-6">
-          <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] mb-3">
+      <div>
+        <div class="art-card p-5">
+          <div class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)] mb-3">
             Підказка
           </div>
+
           <div class="alert-info text-xs">
             Зображення (cover/card) можна додати після створення — на сторінці редагування.
           </div>

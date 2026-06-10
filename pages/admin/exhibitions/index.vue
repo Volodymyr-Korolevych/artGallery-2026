@@ -20,71 +20,93 @@ onMounted(fetchAll)
 
 <template>
   <div>
-    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-7">
       <div>
-        <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] mb-2">
+        <div class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)] mb-2">
           Адмін-панель
         </div>
-        <h1 class="font-serif text-[2rem] md:text-[2.25rem] font-semibold text-[var(--color-text)] leading-none">
+        <h1 class="font-serif text-[1.85rem] md:text-[2.05rem] font-semibold text-[var(--color-text)] leading-none">
           Експозиції
         </h1>
       </div>
 
-      <NuxtLink to="/admin/exhibitions/new" class="btn-primary text-xs self-start sm:self-auto">
+      <NuxtLink to="/admin/exhibitions/new" class="btn-primary self-start sm:self-auto">
         Додати виставку
       </NuxtLink>
     </div>
 
     <div class="art-card overflow-hidden">
-      <div class="px-5 md:px-6 py-4 border-b border-[var(--color-line)] bg-[var(--color-surface-soft)]">
-        <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-4 items-center">
-          <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)]">
-            Усі експозиції
-          </div>
-          <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)]">
-            Статус
-          </div>
-        </div>
-      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[760px] table-fixed">
+          <colgroup>
+            <col style="width: 104px" />
+            <col />
+            <col style="width: 150px" />
+          </colgroup>
 
-      <div v-if="items.length">
-        <div v-for="e in items" :key="e.id"
-          class="grid grid-cols-[88px_minmax(0,1fr)_auto] gap-4 md:gap-5 items-center px-5 md:px-6 py-4 md:py-5 border-b border-[color:rgba(188,197,203,0.25)] last:border-0 cursor-pointer hover:bg-[var(--color-accent-soft)]/40 transition-colors"
-          @click="navigateTo('/admin/exhibitions/' + e.id)">
-          <div class="w-[88px] h-[64px] shrink-0 img-frame">
-            <img v-if="e.cardUrl" :src="e.cardUrl" class="w-full h-full object-cover" :alt="e.title || 'Експозиція'" />
-            <div v-else class="w-full h-full flex items-center justify-center text-[var(--color-text-muted)] text-xs">
-              —
-            </div>
-          </div>
+          <thead class="bg-[var(--color-surface-soft)]">
+            <tr class="border-b border-[var(--color-line)]">
+              <th
+                class="px-4 py-3 text-left text-[11px] tracking-[0.13em] uppercase text-[var(--color-text-muted)] font-medium">
+                Зображення
+              </th>
+              <th
+                class="px-4 py-3 text-left text-[11px] tracking-[0.13em] uppercase text-[var(--color-text-muted)] font-medium">
+                Експозиція
+              </th>
+              <th
+                class="px-4 py-3 text-left text-[11px] tracking-[0.13em] uppercase text-[var(--color-text-muted)] font-medium">
+                Статус
+              </th>
+            </tr>
+          </thead>
 
-          <div class="min-w-0">
-            <div class="font-medium text-[var(--color-text)] truncate mb-1">
-              {{ e.title || 'Без назви' }}
-            </div>
+          <tbody>
+            <tr v-for="e in items" :key="e.id"
+              class="border-b border-[color:rgba(49,91,125,0.14)] last:border-0 cursor-pointer hover:bg-[var(--color-accent-faint)] transition-colors"
+              @click="navigateTo('/admin/exhibitions/' + e.id)">
+              <td class="px-4 py-3 align-middle">
+                <div class="w-[76px] h-[54px] shrink-0 overflow-hidden bg-[var(--color-surface-soft)]">
+                  <img v-if="e.cardUrl" :src="e.cardUrl" class="w-full h-full object-cover"
+                    :alt="e.title || 'Експозиція'" />
+                  <div v-else
+                    class="w-full h-full flex items-center justify-center text-[var(--color-text-muted)] text-xs">
+                    —
+                  </div>
+                </div>
+              </td>
 
-            <div class="text-sm text-[var(--color-text-soft)] truncate">
-              {{ artistsById[e.painterId || (-1 as any)] || '—' }}
-            </div>
+              <td class="px-4 py-3 align-middle">
+                <div class="font-medium text-[var(--color-text)] truncate mb-1">
+                  {{ e.title || 'Без назви' }}
+                </div>
 
-            <div class="text-[11px] tracking-[0.1em] uppercase text-[var(--color-text-muted)] mt-1.5">
-              {{ fmtUA(e.startDate) }} — {{ fmtUA(e.endDate) }}
-            </div>
-          </div>
+                <div class="text-sm text-[var(--color-text-soft)] truncate">
+                  {{ artistsById[e.painterId || (-1 as any)] || '—' }}
+                </div>
 
-          <div class="shrink-0">
-            <span v-if="e.isPublished" class="status-badge current">
-              Опубліковано
-            </span>
-            <span v-else class="status-badge past">
-              Чернетка
-            </span>
-          </div>
-        </div>
-      </div>
+                <div class="text-[11px] text-[var(--color-text-muted)] mt-1">
+                  {{ fmtUA(e.startDate) }} — {{ fmtUA(e.endDate) }}
+                </div>
+              </td>
 
-      <div v-else class="px-5 md:px-6 py-12 text-sm text-[var(--color-text-muted)] text-center italic">
-        Немає виставок
+              <td class="px-4 py-3 align-middle">
+                <span v-if="e.isPublished" class="status-badge current">
+                  Опубліковано
+                </span>
+                <span v-else class="status-badge past">
+                  Чернетка
+                </span>
+              </td>
+            </tr>
+
+            <tr v-if="!items.length">
+              <td colspan="3" class="px-4 py-10 text-sm text-[var(--color-text-muted)] text-center italic">
+                Немає виставок
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>

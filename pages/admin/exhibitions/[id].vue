@@ -105,25 +105,22 @@ const saveArtwork = async () => {
 </script>
 
 <template>
-  <div v-if="!loading && form" class="space-y-8">
+  <div v-if="!loading && form" class="space-y-7">
     <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
       <div>
-        <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)] mb-2">
+        <div class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)] mb-2">
           Адмін-панель / Експозиції
         </div>
-        <h1 class="font-serif text-[2rem] md:text-[2.25rem] font-semibold text-[var(--color-text)] leading-none">
+        <h1 class="font-serif text-[1.85rem] md:text-[2.05rem] font-semibold text-[var(--color-text)] leading-none">
           {{ pageTitle }}
         </h1>
       </div>
 
-      <div class="flex flex-wrap gap-3">
-        <button @click="close" class="btn-ghost text-xs">Закрити</button>
-        <button v-if="!editMode" @click="enableEdit" class="btn-outline text-xs">Редагувати</button>
-        <button v-if="editMode" @click="delExhibition"
-          class="inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium uppercase tracking-[0.08em] transition-all duration-200 border border-red-300 text-red-600 hover:bg-red-600 hover:border-red-600 hover:text-white">
-          Видалити
-        </button>
-        <button v-if="editMode" :disabled="saving" @click="saveExhibition" class="btn-primary text-xs">
+      <div class="admin-action-row flex-wrap">
+        <button @click="close" class="btn-outline">Закрити</button>
+        <button v-if="!editMode" @click="enableEdit" class="btn-outline">Редагувати</button>
+        <button v-if="editMode" @click="delExhibition" class="btn-danger">Видалити</button>
+        <button v-if="editMode" :disabled="saving" @click="saveExhibition" class="btn-primary">
           {{ saving ? 'Збереження...' : 'Зберегти' }}
         </button>
       </div>
@@ -131,15 +128,15 @@ const saveArtwork = async () => {
 
     <div v-if="errorMsg" class="alert-error max-w-2xl">{{ errorMsg }}</div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-8 items-start">
-      <div class="space-y-6">
-        <div class="art-card p-6 md:p-7 space-y-5">
-          <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)]">
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_330px] gap-6 items-start">
+      <div class="space-y-5">
+        <div class="art-card p-5 md:p-6 space-y-4">
+          <div class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)]">
             Основна інформація
           </div>
 
-          <div class="flex items-center gap-6 flex-wrap">
-            <div class="w-56">
+          <div class="flex items-center gap-5 flex-wrap">
+            <div class="w-52">
               <label class="field-label">Статус</label>
               <select v-model="form.status" :disabled="!editMode" class="field-input">
                 <option v-for="s in statusItems" :key="s.value" :value="s.value">{{ s.label }}</option>
@@ -173,49 +170,35 @@ const saveArtwork = async () => {
 
           <div>
             <label class="field-label">Повний опис</label>
-            <textarea v-model="form.description" :readonly="!editMode" rows="5"
+            <textarea v-model="form.description" :readonly="!editMode" rows="4"
               class="field-input resize-none"></textarea>
           </div>
         </div>
 
-        <div class="art-card p-6 md:p-7 space-y-5">
-          <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)]">
+        <div class="art-card p-5 md:p-6 space-y-4">
+          <div class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)]">
             Дати
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label class="field-label">Дата початку</label>
-              <VueDatePicker 
-                  v-model="form.startDate" 
-                  :locale="uk"
-                  :format="formatUaDate"
-                  model-type="yyyy-MM-dd"
-                  :formats="{ input: 'd MMMM yyyy' }"
-                  auto-apply 
-                  :enable-time-picker="false" 
-                  :teleport="true" 
-                  menu-class-name="gallery-datepicker-menu" />
+              <VueDatePicker v-model="form.startDate" :locale="uk" :format="formatUaDate" model-type="yyyy-MM-dd"
+                :formats="{ input: 'd MMMM yyyy' }" auto-apply :enable-time-picker="false" :teleport="true"
+                menu-class-name="gallery-datepicker-menu" />
             </div>
             <div>
               <label class="field-label">Дата завершення</label>
-              <VueDatePicker 
-                v-model="form.endDate"
-                :locale="uk"
-                :format="formatUaDate"
-                model-type="yyyy-MM-dd"
-                :formats="{ input: 'd MMMM yyyy' }" 
-                auto-apply 
-                :enable-time-picker="false" 
-                :teleport="true" 
+              <VueDatePicker v-model="form.endDate" :locale="uk" :format="formatUaDate" model-type="yyyy-MM-dd"
+                :formats="{ input: 'd MMMM yyyy' }" auto-apply :enable-time-picker="false" :teleport="true"
                 menu-class-name="gallery-datepicker-menu" />
             </div>
           </div>
         </div>
 
-        <div class="art-card p-6 md:p-7 space-y-5">
+        <div class="art-card p-5 md:p-6 space-y-4">
           <div class="flex items-center justify-between gap-4">
-            <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)]">
+            <div class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)]">
               Роботи (макс. 6)
             </div>
             <div class="text-xs text-[var(--color-text-muted)]">
@@ -225,11 +208,12 @@ const saveArtwork = async () => {
 
           <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
             <div v-for="i in 6" :key="i" @click="openSlotDialog(i)"
-              class="art-card cursor-pointer hover:bg-[var(--color-accent-soft)]/40 transition-colors p-2">
+              class="art-card cursor-pointer hover:bg-[var(--color-accent-faint)] transition-colors p-2">
               <div class="img-frame h-24 mb-2">
                 <img v-if="artworks.find(a => a.slot === i)?.imageUrl" :src="artworks.find(a => a.slot === i)?.imageUrl"
                   class="h-full w-full object-contain" />
-                <div v-else class="h-full flex items-center justify-center text-[var(--color-text-muted)]">—</div>
+                <div v-else class="h-full flex items-center justify-center text-[var(--color-text-muted)] text-sm">—
+                </div>
               </div>
               <div class="text-xs text-[var(--color-text-soft)] truncate text-center">
                 {{artworks.find(a => a.slot === i)?.title || ('Робота ' + i)}}
@@ -239,17 +223,17 @@ const saveArtwork = async () => {
         </div>
       </div>
 
-      <div class="space-y-6">
-        <div class="art-card p-6 space-y-5">
-          <div class="text-[11px] tracking-[0.16em] uppercase text-[var(--color-text-muted)]">
+      <div class="space-y-5">
+        <div class="art-card p-5 space-y-4">
+          <div class="text-[11px] tracking-[0.14em] uppercase text-[var(--color-text-muted)]">
             Зображення виставки
           </div>
 
           <div>
             <label class="field-label">Cover (обкладинка)</label>
-            <button v-if="editMode" @click="pickCover" class="btn-outline text-xs mt-1">Оберіть файл</button>
+            <button v-if="editMode" @click="pickCover" class="btn-outline mt-1">Оберіть файл</button>
             <input ref="coverInput" type="file" accept="image/*" class="hidden" @change="onCoverChange" />
-            <div class="img-frame mt-3 h-32 flex items-center justify-center bg-[var(--color-surface-soft)]">
+            <div class="img-frame mt-3 h-28 flex items-center justify-center bg-transparent">
               <img v-if="form.coverUrl" :src="form.coverUrl" class="h-full w-full object-contain" />
               <div v-else class="text-sm text-[var(--color-text-muted)]">Cover відсутній</div>
             </div>
@@ -257,9 +241,9 @@ const saveArtwork = async () => {
 
           <div>
             <label class="field-label">Card (картка)</label>
-            <button v-if="editMode" @click="pickCard" class="btn-outline text-xs mt-1">Оберіть файл</button>
+            <button v-if="editMode" @click="pickCard" class="btn-outline mt-1">Оберіть файл</button>
             <input ref="cardInput" type="file" accept="image/*" class="hidden" @change="onCardChange" />
-            <div class="img-frame mt-3 h-32 flex items-center justify-center bg-[var(--color-surface-soft)]">
+            <div class="img-frame mt-3 h-28 flex items-center justify-center bg-transparent">
               <img v-if="form.cardUrl" :src="form.cardUrl" class="h-full w-full object-contain" />
               <div v-else class="text-sm text-[var(--color-text-muted)]">Card відсутній</div>
             </div>
@@ -270,7 +254,7 @@ const saveArtwork = async () => {
 
     <div v-if="dialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       @click.self="dialog = false">
-      <div class="bg-[var(--color-surface)] w-full max-w-md art-card p-6 space-y-4">
+      <div class="bg-[var(--color-surface)] w-full max-w-md art-card p-5 space-y-4">
         <div class="flex items-center justify-between">
           <h2 class="font-serif text-xl font-semibold text-[var(--color-text)]">
             Робота {{ currentSlot }}
@@ -297,20 +281,19 @@ const saveArtwork = async () => {
         </div>
 
         <div>
-          <button @click="pickArtFile" class="btn-outline text-xs">Оберіть зображення</button>
+          <button @click="pickArtFile" class="btn-outline">Оберіть зображення</button>
           <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onArtFile" />
         </div>
 
         <client-only v-if="isClient">
-          <div v-if="previewUrl"
-            class="img-frame h-32 mt-1 flex items-center justify-center bg-[var(--color-surface-soft)]">
+          <div v-if="previewUrl" class="img-frame h-32 mt-1 flex items-center justify-center bg-transparent">
             <img :src="previewUrl" class="h-full w-full object-contain" />
           </div>
         </client-only>
 
-        <div class="flex justify-end gap-3 pt-2">
-          <button @click="dialog = false" class="btn-ghost text-xs">Скасувати</button>
-          <button :disabled="uploadBusy" @click="saveArtwork" class="btn-primary text-xs">
+        <div class="admin-action-row pt-2">
+          <button @click="dialog = false" class="btn-outline">Скасувати</button>
+          <button :disabled="uploadBusy" @click="saveArtwork" class="btn-primary">
             {{ uploadBusy ? 'Збереження...' : 'Зберегти' }}
           </button>
         </div>
@@ -318,6 +301,7 @@ const saveArtwork = async () => {
     </div>
   </div>
 </template>
+
 <style scoped>
 :global(.gallery-datepicker-menu) {
   z-index: 9999 !important;
