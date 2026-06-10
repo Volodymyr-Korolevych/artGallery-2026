@@ -102,10 +102,23 @@ const fmtRange = (s: string | null, e: string | null) => {
     <main class="flex-1">
 
       <!-- Loading -->
-      <div v-if="loading" class="container py-12">
-        <div class="skeleton h-[420px] w-full mb-6"></div>
-        <div class="skeleton h-6 w-1/3 mb-3"></div>
-        <div class="skeleton h-6 w-1/2"></div>
+      <div v-if="loading" class="container py-10 md:py-12">
+        <div class="max-w-3xl space-y-4">
+          <div class="divider"></div>
+          <div class="skeleton h-10 w-2/3"></div>
+          <div class="skeleton h-4 w-1/2"></div>
+          <div class="skeleton h-24 w-full mt-6"></div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+          <div v-for="n in 6" :key="n" class="art-card animate-pulse overflow-hidden">
+            <div class="skeleton-img h-64"></div>
+            <div class="p-4 space-y-3">
+              <div class="skeleton h-5 w-2/3"></div>
+              <div class="skeleton h-3 w-1/4"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Empty -->
@@ -119,65 +132,58 @@ const fmtRange = (s: string | null, e: string | null) => {
       <div v-else class="container py-10 md:py-12">
 
         <!-- Header -->
-        <div class="mb-6">
+        <header class="max-w-3xl mb-10 md:mb-12">
           <div class="divider"></div>
 
-          <h1 class="font-serif mb-3">
+          <h1 class="font-serif mb-4">
             {{ ex.title }}
           </h1>
 
-          <div class="text-sm text-[var(--color-text-muted)] mb-2">
-            {{ fmtRange(ex.startDate, ex.endDate) }}
-          </div>
-
-          <div v-if="artist" class="text-sm text-[var(--color-text-muted)]">
+          <div v-if="artist" class="text-[16px] text-[var(--color-text-soft)] mb-3">
             Художник:
             <NuxtLink :to="'/artists/' + artist.slug" class="artist-link ml-1">
               {{ artist.fullName }}
             </NuxtLink>
           </div>
-        </div>
 
-        <!-- IMAGE (ВИПРАВЛЕНО) -->
-        <div v-if="ex.coverUrl" class="flex justify-center mb-8">
-          <img :src="ex.coverUrl" :alt="ex.title" class="w-full max-w-[900px] max-h-[700px] object-contain" />
-        </div>
+          <div v-if="ex.startDate || ex.endDate" class="text-sm text-[var(--color-text-muted)] mb-6">
+            {{ fmtRange(ex.startDate, ex.endDate) }}
+          </div>
 
-        <!-- Description -->
-        <div v-if="ex.description" class="max-w-3xl">
-          <p class="text-[15px] md:text-base leading-relaxed text-[var(--color-text-soft)] whitespace-pre-line">
+          <p v-if="ex.description"
+            class="text-[15px] md:text-base leading-relaxed text-[var(--color-text-soft)] whitespace-pre-line">
             {{ ex.description }}
           </p>
-        </div>
+        </header>
 
         <!-- Artworks -->
-        <section v-if="artworks.length" class="mt-12">
+        <section v-if="artworks.length">
           <div class="divider"></div>
 
           <h2 class="font-serif text-2xl md:text-3xl mb-6 text-[var(--color-text)]">
-            Декілька робіт з виставки
+            Роботи з експозиції
           </h2>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <article v-for="work in artworks" :key="work.id" class="art-card overflow-hidden">
-              <div class="bg-[var(--color-bg-soft)]">
-                <img v-if="work.imageUrl" :src="work.imageUrl" :alt="work.title" class="w-full h-64 object-cover" />
+              <div class="img-frame bg-transparent">
+                <img v-if="work.imageUrl" :src="work.imageUrl" :alt="work.title" class="w-full h-64 object-contain" />
                 <div v-else class="h-64 flex items-center justify-center text-sm text-[var(--color-text-muted)]">
                   Немає зображення
                 </div>
               </div>
 
-              <div class="p-4">
-                <h3 class="font-serif text-xl text-[var(--color-text)] leading-tight">
+              <div class="p-4 space-y-1.5">
+                <h3 class="font-serif text-[1.22rem] text-[var(--color-text)] leading-tight">
                   {{ work.title }}
                 </h3>
 
-                <div v-if="work.year" class="mt-1 text-xs text-[var(--color-text-muted)]">
+                <div v-if="work.year" class="text-[12px] leading-snug text-[var(--color-text-muted)]">
                   {{ work.year }}
                 </div>
 
                 <p v-if="work.description"
-                  class="mt-3 text-sm leading-relaxed text-[var(--color-text-soft)] line-clamp-3">
+                  class="text-sm leading-relaxed text-[var(--color-text-soft)] line-clamp-3 pt-1">
                   {{ work.description }}
                 </p>
               </div>
