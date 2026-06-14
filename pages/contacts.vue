@@ -55,7 +55,7 @@ const submitForm = async () => {
             <div>
               <div class="field-label">Адреса</div>
               <div class="font-serif text-[1.15rem] md:text-[1.25rem] text-[var(--color-text)] leading-snug">
-                вул. Прикладна, 1, Київ
+                вул. Прикладна, 10, Львів
               </div>
             </div>
 
